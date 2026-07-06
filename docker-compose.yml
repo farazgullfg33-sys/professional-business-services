@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: professionalbs
+      POSTGRES_USER: professionalbs
+      POSTGRES_PASSWORD: professionalbs
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5433:5432"
+
+  web:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: "${DATABASE_URL}"
+      NEXTAUTH_URL: "${NEXTAUTH_URL}"
+      NEXTAUTH_SECRET: "${NEXTAUTH_SECRET}"
+      DEEPSEEK_API_KEY: "${DEEPSEEK_API_KEY}"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pro-main.rule=Host(`pro.aiinvention.tech`)"
+      - "traefik.http.routers.pro-main.entrypoints=websecure"
+      - "traefik.http.routers.pro-main.tls.certresolver=letsencrypt"
+      - "traefik.http.services.pro-main.loadbalancer.server.port=3000"
+      - "traefik.http.routers.pro-admin.rule=Host(`admin-pro.aiinvention.tech`)"
+      - "traefik.http.routers.pro-admin.entrypoints=websecure"
+      - "traefik.http.routers.pro-admin.tls.certresolver=letsencrypt"
+      - "traefik.http.services.pro-admin.loadbalancer.server.port=3000"
+    networks:
+      - default
+      - ai-invention_default
+
+networks:
+  ai-invention_default:
+    external: true
+
+volumes:
+  postgres_data:

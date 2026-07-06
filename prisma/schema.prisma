@@ -1,0 +1,174 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id             String             @id @default(cuid())
+  name           String
+  email          String?
+  phone          String?
+  company        String?
+  businessType   String?
+  status         String             @default("active")
+  source         String?
+  notes          String?
+  createdAt      DateTime           @default(now())
+  services       ServiceRequest[]
+  documents      Document[]
+  communications CommunicationLog[]
+  followUps      FollowUp[]
+  quotes         Quote[]
+}
+
+model ServiceRequest {
+  id          String    @id @default(cuid())
+  clientId    String
+  serviceType String
+  status      String    @default("new")
+  assignedTo  String?
+  priority    String    @default("normal")
+  deadline    DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  client      Client    @relation(fields: [clientId], references: [id])
+}
+
+model Lead {
+  id              String   @id @default(cuid())
+  name            String
+  email           String?
+  phone           String?
+  serviceInterest String?
+  message         String?
+  source          String   @default("website")
+  status          String   @default("new")
+  assignedTo      String?
+  createdAt       DateTime @default(now())
+}
+
+model Document {
+  id         String    @id @default(cuid())
+  clientId   String
+  name       String
+  type       String
+  fileUrl    String
+  expiryDate DateTime?
+  client     Client    @relation(fields: [clientId], references: [id])
+}
+
+model Staff {
+  id       String  @id @default(cuid())
+  name     String
+  email    String  @unique
+  password String
+  role     String  @default("pro")
+  active   Boolean @default(true)
+}
+
+model ContactSubmission {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model QuoteRequest {
+  id              String   @id @default(cuid())
+  name            String
+  email           String
+  phone           String?
+  company         String?
+  serviceInterest String
+  message         String?
+  status          String   @default("new")
+  createdAt       DateTime @default(now())
+}
+
+model BlogPost {
+  id        String   @id @default(cuid())
+  title     String
+  slug      String   @unique
+  excerpt   String?
+  content   String
+  category  String?
+  published Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model ChatbotConversation {
+  id        String   @id @default(cuid())
+  name      String?
+  phone     String?
+  email     String?
+  messages  String
+  lead      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model CommunicationLog {
+  id        String   @id @default(cuid())
+  clientId  String
+  type      String
+  staffName String
+  summary   String
+  outcome   String?
+  createdAt DateTime @default(now())
+  client    Client   @relation(fields: [clientId], references: [id])
+}
+
+model FollowUp {
+  id        String   @id @default(cuid())
+  clientId  String
+  step      String
+  dueDate   DateTime
+  completed Boolean  @default(false)
+  notes     String?
+  client    Client   @relation(fields: [clientId], references: [id])
+}
+
+model Quote {
+  id        String    @id @default(cuid())
+  clientId  String
+  services  String
+  govFees   Float
+  proFees   Float
+  total     Float
+  status    String    @default("draft")
+  createdAt DateTime  @default(now())
+  client    Client    @relation(fields: [clientId], references: [id])
+  invoices  Invoice[]
+}
+
+model Invoice {
+  id            String    @id @default(cuid())
+  quoteId       String
+  amount        Float
+  status        String    @default("pending")
+  paymentMethod String?
+  paidAt        DateTime?
+  createdAt     DateTime  @default(now())
+  quote         Quote     @relation(fields: [quoteId], references: [id])
+}
+
+model FormationChecklist {
+  id        String   @id @default(cuid())
+  clientId  String
+  steps     String
+  createdAt DateTime @default(now())
+}
+
+model ComplianceDeadline {
+  id       String   @id @default(cuid())
+  clientId String
+  type     String
+  dueDate  DateTime
+  status   String   @default("pending")
+}
