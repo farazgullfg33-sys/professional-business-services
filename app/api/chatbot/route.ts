@@ -31,5 +31,18 @@ export async function POST(request: Request) {
       lead: Boolean(parsed.data.phone || parsed.data.email)
     }
   });
+  // Also create a Lead if contact info provided
+  if (parsed.data.phone || parsed.data.email) {
+    await prisma.lead.create({
+      data: {
+        name: parsed.data.name || "Chatbot Lead",
+        phone: parsed.data.phone,
+        email: parsed.data.email,
+        message: parsed.data.message,
+        serviceInterest: "Chatbot Inquiry",
+        source: "chatbot"
+      }
+    });
+  }
   return NextResponse.json({ ok: true });
 }
