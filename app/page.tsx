@@ -77,7 +77,7 @@ export default function HomePage() {
             {testimonials.map((testimonial) => (
               <article key={testimonial.name} className="rounded-lg border border-navy/10 bg-white p-7 shadow-soft">
                 <div className="flex gap-1 text-gold">{Array.from({ length: 5 }).map((_, index) => <Star key={index} size={17} fill="currentColor" />)}</div>
-                <p className="mt-5 leading-7 text-ink/70">"{testimonial.text}"</p>
+                <p className="mt-5 leading-7 text-ink/70">&ldquo;{testimonial.text}&rdquo;</p>
                 <h3 className="mt-6 font-semibold text-navy">{testimonial.name}</h3>
                 <p className="text-sm text-ink/55">{testimonial.company}</p>
               </article>
