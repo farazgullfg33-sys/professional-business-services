@@ -133,15 +133,48 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
 
           {/* ---- QUOTES & INVOICES ---- */}
           {active === "Quotes & Invoices" && data && (
-            <div className="mt-6 bg-white rounded-lg border border-navy/10 overflow-hidden">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-mist text-navy"><tr><th className="px-4 py-3">Name</th><th className="px-4 py-3 hidden sm:table-cell">Email</th><th className="px-4 py-3 hidden sm:table-cell">Company</th><th className="px-4 py-3 hidden md:table-cell">Service</th><th className="px-4 py-3">Date</th></tr></thead>
-                <tbody className="divide-y divide-navy/10">
-                  {data.quotes?.map((q: Quote) => (
-                    <tr key={q.id}><td className="px-4 py-3 font-medium text-navy">{q.name}</td><td className="px-4 py-3 hidden sm:table-cell text-ink/60">{q.email}</td><td className="px-4 py-3 hidden sm:table-cell text-ink/60">{q.company||"-"}</td><td className="px-4 py-3 hidden md:table-cell text-ink/60">{q.serviceInterest||"-"}</td><td className="px-4 py-3 text-ink/60">{new Date(q.createdAt).toLocaleDateString()}</td></tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="mt-6 space-y-6">
+              {/* Create Quote Form */}
+              <div className="bg-white rounded-lg border border-navy/10 p-5">
+                <h3 className="text-lg font-semibold text-navy mb-3">Create New Quote</h3>
+                <form className="grid gap-3 md:grid-cols-4" onSubmit={async(e)=>{e.preventDefault();const f=new FormData(e.currentTarget);const r=await fetch("/api/admin/quote/create",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({clientId:f.get("clientId"),services:f.get("services"),govFees:f.get("govFees"),proFees:f.get("proFees")})});if(r.ok){alert("Quote created! Reloading...");window.location.reload();}}}>
+                  <select name="clientId" className="rounded-md border border-navy/15 px-3 py-2 text-sm" required>
+                    <option value="">Select Client</option>
+                    {data.clients?.map((c:any)=><option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  <input name="services" placeholder="Services (comma separated)" className="rounded-md border border-navy/15 px-3 py-2 text-sm" required />
+                  <input name="govFees" type="number" step="0.01" placeholder="Govt Fees (AED)" className="rounded-md border border-navy/15 px-3 py-2 text-sm" />
+                  <button type="submit" className="rounded-md bg-gold px-4 py-2 text-sm font-semibold text-navy">Create Quote</button>
+                </form>
+              </div>
+
+              {/* Quotes Table */}
+              <div className="bg-white rounded-lg border border-navy/10 overflow-hidden">
+                <h3 className="px-4 py-3 text-lg font-semibold text-navy border-b border-navy/10">Generated Quotes</h3>
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-mist text-navy"><tr><th className="px-4 py-3">Client</th><th className="px-4 py-3 hidden sm:table-cell">Services</th><th className="px-4 py-3">Govt Fees</th><th className="px-4 py-3">PRO Fees</th><th className="px-4 py-3">Total</th><th className="px-4 py-3">Actions</th></tr></thead>
+                  <tbody className="divide-y divide-navy/10">
+                    {data.quotesList?.map((q:any)=>(
+                      <tr key={q.id}><td className="px-4 py-3 font-medium text-navy">{q.client.name}</td><td className="px-4 py-3 hidden sm:table-cell text-ink/60 text-xs">{q.services}</td><td className="px-4 py-3">AED {q.govFees}</td><td className="px-4 py-3">AED {q.proFees}</td><td className="px-4 py-3 font-bold">AED {q.total}</td><td className="px-4 py-3"><a href={`/api/admin/quote/pdf?id=${q.id}`} target="_blank" className="text-gold font-semibold text-xs hover:underline">PDF</a></td></tr>
+                    ))}
+                    {(!data.quotesList||data.quotesList.length===0)&&<tr><td colSpan={6} className="px-4 py-8 text-center text-ink/40">No quotes yet. Create one above.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Invoices Table */}
+              <div className="bg-white rounded-lg border border-navy/10 overflow-hidden">
+                <h3 className="px-4 py-3 text-lg font-semibold text-navy border-b border-navy/10">Invoices</h3>
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-mist text-navy"><tr><th className="px-4 py-3">Invoice #</th><th className="px-4 py-3">Client</th><th className="px-4 py-3">Amount</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Actions</th></tr></thead>
+                  <tbody className="divide-y divide-navy/10">
+                    {data.invoices?.map((inv:any)=>(
+                      <tr key={inv.id}><td className="px-4 py-3 font-medium text-navy">INV-{inv.id.slice(0,8)}</td><td className="px-4 py-3">{inv.quote.client.name}</td><td className="px-4 py-3 font-bold">AED {inv.amount}</td><td className="px-4 py-3"><span className={inv.status==="paid"?"bg-green-50 text-green-700 text-xs px-2 py-0.5 rounded-full":"bg-amber-50 text-amber-700 text-xs px-2 py-0.5 rounded-full"}>{inv.status}</span></td><td className="px-4 py-3"><a href={`/api/admin/invoice/pdf?id=${inv.id}`} target="_blank" className="text-gold font-semibold text-xs hover:underline">PDF</a></td></tr>
+                    ))}
+                    {(!data.invoices||data.invoices.length===0)&&<tr><td colSpan={5} className="px-4 py-8 text-center text-ink/40">No invoices yet</td></tr>}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
