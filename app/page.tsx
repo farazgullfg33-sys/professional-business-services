@@ -9,15 +9,15 @@ export default function HomePage() {
   return (
     <main>
       <section className="bg-white">
-        <div className="section-shell grid min-h-[calc(100vh-120px)] items-center gap-12 py-12 lg:grid-cols-[1fr_0.9fr]">
+        <div className="section-shell grid items-center gap-8 py-8 sm:py-12 lg:min-h-[calc(100vh-140px)] lg:grid-cols-[1fr_0.9fr]">
           <div>
-            <h1 className="text-4xl font-bold leading-tight text-navy md:text-6xl">
+            <h1 className="text-3xl font-bold leading-tight text-navy sm:text-4xl md:text-6xl">
               Your Trusted Partner for <span className="gold-gradient">PRO Services in UAE</span>
             </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-ink/70">
-              Professional business setup, visa processing, and government liaison services
+            <p className="mt-4 max-w-2xl text-base leading-7 text-ink/70 sm:mt-6 sm:text-lg sm:leading-8">
+              Professional business setup, visa processing, and UAE government services support
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-6 flex flex-wrap gap-3 sm:mt-8">
               <Button href="/quote">Get Free Consultation</Button>
               <Button href="/services" variant="outline">Our Services</Button>
             </div>
@@ -29,10 +29,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="py-20">
+      <section className="py-12 sm:py-20">
         <div className="section-shell">
           <SectionHeading title="Services Built Around UAE Business Reality" copy="From the first trade name reservation to renewal calendars and visa files, every workflow is designed for clarity, speed, and compliant follow-through." />
-          <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {serviceHighlights.map((service) => {
               const Icon = service.icon;
               return (
@@ -50,10 +50,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="bg-mist py-20">
+      <section className="bg-mist py-12 sm:py-20">
         <div className="section-shell">
           <SectionHeading align="center" title="Why Choose Us" />
-          <div className="mt-10 grid gap-5 md:grid-cols-3">
+          <div className="mt-8 grid gap-5 sm:grid-cols-2 md:grid-cols-3">
             {whyChooseUs.map((item) => {
               const Icon = item.icon;
               return (
@@ -70,14 +70,14 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="py-20">
+      <section className="py-12 sm:py-20">
         <div className="section-shell">
           <SectionHeading title="Client Feedback" copy="Placeholder testimonials showing the quote-style design requested for the launch build." />
-          <div className="mt-10 grid gap-5 md:grid-cols-3">
+          <div className="mt-8 grid gap-5 sm:grid-cols-2 md:grid-cols-3">
             {testimonials.map((testimonial) => (
               <article key={testimonial.name} className="rounded-lg border border-navy/10 bg-white p-7 shadow-soft">
                 <div className="flex gap-1 text-gold">{Array.from({ length: 5 }).map((_, index) => <Star key={index} size={17} fill="currentColor" />)}</div>
-                <p className="mt-5 leading-7 text-ink/70">“{testimonial.text}”</p>
+                <p className="mt-5 leading-7 text-ink/70">"{testimonial.text}"</p>
                 <h3 className="mt-6 font-semibold text-navy">{testimonial.name}</h3>
                 <p className="text-sm text-ink/55">{testimonial.company}</p>
               </article>
@@ -87,10 +87,10 @@ export default function HomePage() {
       </section>
 
       <WaveBackground />
-      <section className="bg-mist py-16">
+      <section className="bg-mist py-12 sm:py-16">
         <div className="section-shell flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
           <div>
-            <h2 className="text-3xl font-semibold text-navy">Ready to Start Your Business in UAE?</h2>
+            <h2 className="text-2xl font-semibold text-navy sm:text-3xl">Ready to Start Your Business in UAE?</h2>
             <p className="mt-3 text-ink/65">Send the request and the team will review the right service route.</p>
           </div>
           <Button href="/quote">Get Free Quote</Button>

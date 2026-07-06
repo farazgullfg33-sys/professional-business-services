@@ -20,10 +20,10 @@ export function TopBar() {
   return (
     <div className="bg-navy py-2 text-sm text-white">
       <div className="section-shell flex flex-wrap items-center justify-center gap-x-6 gap-y-1 md:justify-between">
-        <a className="inline-flex items-center gap-2" href={`tel:${company.phone.replace(/\s/g, "")}`}>
-          <Phone size={15} /> {company.phone}
+        <a className="inline-flex items-center gap-1.5 text-xs sm:gap-2 sm:text-sm" href={`tel:${company.phone.replace(/\s/g, "")}`}>
+          <Phone size={14} className="sm:h-[15px] sm:w-[15px]" /> {company.phone}
         </a>
-        <span className="inline-flex items-center gap-2"><Clock size={15} /> Mon-Sat PRO Services in Abu Dhabi</span>
+        <span className="hidden text-xs text-white/70 sm:inline-flex sm:items-center sm:gap-2 sm:text-sm"><Clock size={15} /> Mon-Sat PRO Services in Abu Dhabi</span>
       </div>
     </div>
   );
@@ -34,11 +34,12 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-40 border-b border-navy/10 bg-white/95 backdrop-blur">
       <div className="section-shell flex min-h-20 items-center justify-between gap-5">
-        <Link href="/" className="flex max-w-[260px] items-center gap-3 text-lg font-bold leading-tight text-navy md:max-w-none">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-gold/50 bg-white shadow-sm">
-            <Image src="/favicon.ico" alt="Professional Business Services logo" width={34} height={34} />
+        <Link href="/" className="flex max-w-[200px] items-center gap-2 text-base font-bold leading-tight text-navy sm:max-w-none sm:gap-3 sm:text-lg">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-gold/50 bg-white shadow-sm sm:h-12 sm:w-12">
+            <Image src="/favicon.ico" alt="Logo" width={30} height={30} className="sm:h-[34px] sm:w-[34px]" />
           </span>
-          <span>Professional Business Services</span>
+          <span className="sm:hidden">PRO Services</span>
+          <span className="hidden sm:inline">Professional Business Services</span>
         </Link>
         <nav className="hidden items-center gap-6 text-sm font-medium text-ink/70 lg:flex">
           {nav.map(([label, href]) => (
