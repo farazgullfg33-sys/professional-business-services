@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import "./globals.css";
 import { FloatingWidgets, Footer, Navbar, TopBar } from "@/components/SiteChrome";
 
@@ -11,14 +12,22 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const pathname = headers().get("x-pathname") || "";
+
   return (
     <html lang="en">
       <body className="font-sans antialiased">
-        <TopBar />
-        <Navbar />
-        {children}
-        <Footer />
-        <FloatingWidgets />
+        {pathname.startsWith("/admin") ? (
+          children
+        ) : (
+          <>
+            <TopBar />
+            <Navbar />
+            {children}
+            <Footer />
+            <FloatingWidgets />
+          </>
+        )}
       </body>
     </html>
   );
