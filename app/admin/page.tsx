@@ -13,7 +13,7 @@ export default async function AdminPage() {
   const session = await getServerSession(authOptions);
   if (!session) return <LoginForm />;
 
-  const [clients, leads, contacts, quotes, services] = await Promise.all([
+  const [clients, leads, contacts, quoteReqs, services] = await Promise.all([
     prisma.client.count(),
     prisma.lead.count(),
     prisma.contactSubmission.count(),
@@ -21,5 +21,5 @@ export default async function AdminPage() {
     prisma.serviceRequest.count()
   ]);
 
-  return <AdminPanel role={session.user?.role} stats={{ clients, leads, contacts, quotes, services }} />;
+  return <AdminPanel role={session.user?.role} stats={{ clients, leads, contacts, quoteReqs, services }} />;
 }
