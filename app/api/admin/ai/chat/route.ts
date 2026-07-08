@@ -30,7 +30,7 @@ export async function POST(request: Request) {
         `Company: ${client.company || "N/A"}`,
         `Business type: ${client.businessType || "N/A"}`,
         `Source: ${client.source || "N/A"}`,
-        `Existing services: ${client.services.map((s) => `${s.serviceType} (${s.status})`).join(", ") || "None"}`
+        `Existing services: ${client.services.map((s: { serviceType: string; status: string }) => `${s.serviceType} (${s.status})`).join(", ") || "None"}`
       ].join("\n");
 
       const reply = await callDeepSeek([
