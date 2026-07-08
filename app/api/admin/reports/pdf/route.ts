@@ -21,8 +21,8 @@ export async function GET() {
     prisma.invoice.count({ where: { status: "pending" } })
   ]);
 
-  const revenueMonth = invoicesMonth.reduce((sum, i) => sum + i.amount, 0);
-  const revenueYtd = invoicesYtd.reduce((sum, i) => sum + i.amount, 0);
+  const revenueMonth = invoicesMonth.reduce((sum: number, i: { amount: number }) => sum + i.amount, 0);
+  const revenueYtd = invoicesYtd.reduce((sum: number, i: { amount: number }) => sum + i.amount, 0);
   const pipeline = statusBreakdown(services);
   const sources = leadsBySource(leads);
   const productivity = staffProductivity(services);

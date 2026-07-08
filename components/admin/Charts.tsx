@@ -32,7 +32,7 @@ export function RevenueTrendChart({ data }: { data: { month: string; revenue: nu
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
         <XAxis dataKey="month" tick={axisStyle} axisLine={{ stroke: "rgba(255,255,255,0.12)" }} tickLine={false} />
         <YAxis tick={axisStyle} axisLine={false} tickLine={false} width={64} tickFormatter={(v: number) => Intl.NumberFormat("en-US", { notation: "compact" }).format(v)} />
-        <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`AED ${v.toLocaleString()}`, "Revenue"]} />
+        <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`AED ${(v as number).toLocaleString()}`, "Revenue"]} />
         <Line type="monotone" dataKey="revenue" stroke="#c9a84c" strokeWidth={2.5} dot={{ r: 3, fill: "#c9a84c" }} activeDot={{ r: 5 }} />
       </LineChart>
     </ResponsiveContainer>
