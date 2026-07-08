@@ -13,6 +13,7 @@ import { Button } from "@/components/Button";
 import { cn } from "@/lib/utils";
 import { acquisitionFunnel, leadsBySource, monthlyRevenueSeries, staffProductivity, statusBreakdown } from "@/lib/reports";
 import { AcquisitionFunnelChart, LeadsBySourceChart, RevenueTrendChart, StaffProductivityChart, StatusBreakdownChart } from "@/components/admin/Charts";
+import { useSSE } from "@/hooks/useSSE";
 
 type Stats = { clients: number; leads: number; contacts: number; quoteReqs: number; services: number };
 type Client = { id: string; name: string; email?: string; phone?: string; company?: string; businessType?: string; status: string; source?: string };
@@ -104,6 +105,8 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
 
   useEffect(() => { fetchData(); }, [active]);
 
+  const { connected: live } = useSSE("/api/admin/events", () => fetchData());
+
   const activeModule = useMemo(() => modules.find(m => m.name === active) ?? modules[0], [active]);
   const revenue = useMemo(() => revenueTotals(data?.invoices), [data]);
   const pending = useMemo(() => pendingTaskCounts(data), [data]);
@@ -159,6 +162,10 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
               <h1 className="font-heading text-lg font-bold text-heading">PRO Admin</h1>
               <p className="text-xs text-muted">Role: {role ?? "staff"}</p>
             </div>
+          </div>
+          <div className="mt-4 flex items-center gap-1.5 text-xs font-medium">
+            <span className={cn("h-1.5 w-1.5 rounded-full", live ? "bg-emerald-400 animate-pulse" : "bg-muted")} />
+            <span className={live ? "text-emerald-300" : "text-muted"}>{live ? "Live" : "Reconnecting..."}</span>
           </div>
           <nav className="mt-7 grid gap-1">
             {modules.map(m => { const I=m.icon; const isActive = active === m.name; return (
