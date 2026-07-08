@@ -33,7 +33,7 @@ export async function POST(request: Request) {
 
       case "/clients": {
         const clients = await prisma.client.findMany({ orderBy: { createdAt: "desc" }, take: 5 });
-        const lines = clients.map((c) => `- ${c.name}${c.company ? ` (${c.company})` : ""} - ${c.status}`);
+        const lines = clients.map((c: { name: string; company?: string | null; status: string }) => `- ${c.name}${c.company ? ` (${c.company})` : ""} - ${c.status}`);
         await sendTelegramMessage(chatId, `*Recent Clients*\n${lines.join("\n") || "No clients yet."}`);
         break;
       }
@@ -46,8 +46,8 @@ export async function POST(request: Request) {
           prisma.invoice.findMany({ where: { status: "paid", paidAt: { gte: startOfMonth } }, select: { amount: true } }),
           prisma.invoice.findMany({ where: { status: "paid", paidAt: { gte: startOfYear } }, select: { amount: true } })
         ]);
-        const month = monthInvoices.reduce((sum, i) => sum + i.amount, 0);
-        const ytd = ytdInvoices.reduce((sum, i) => sum + i.amount, 0);
+        const month = monthInvoices.reduce((sum: number, i: { amount: number }) => sum + i.amount, 0);
+        const ytd = ytdInvoices.reduce((sum: number, i: { amount: number }) => sum + i.amount, 0);
         await sendTelegramMessage(chatId, `*Revenue*\nThis Month: AED ${month.toFixed(2)}\nYear to Date: AED ${ytd.toFixed(2)}`);
         break;
       }
