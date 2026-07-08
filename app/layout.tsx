@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   }
 };
 
-const noFlashScript = `try{if(localStorage.getItem('pbs-theme')==='light'){document.documentElement.classList.add('light')}}catch(e){}`;
+const noFlashScript = `try{if(!location.pathname.startsWith('/admin')&&localStorage.getItem('pbs-theme')==='light'){document.documentElement.classList.add('light')}}catch(e){}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = headers().get("x-pathname") || "";
@@ -31,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${inter.variable} ${plusJakarta.variable}`}>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: noFlashScript }} />
+        {!pathname.startsWith("/admin") ? <script dangerouslySetInnerHTML={{ __html: noFlashScript }} /> : null}
       </head>
       <body className="bg-base font-sans text-body antialiased">
         {pathname.startsWith("/admin") ? (

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { signOut } from "next-auth/react";
 import {
-  BarChart3, CalendarDays, CheckSquare, ClipboardList, FileArchive, FileBadge,
-  FileText, FolderOpen, LayoutDashboard, LogOut, MessageSquareText, ReceiptText,
-  RefreshCcw, ShieldCheck, UserCog, UsersRound, Loader2, Plus, Download
+  BarChart3, CalendarDays, CheckSquare, ClipboardList, Download, FileArchive, FileBadge,
+  FileText, FolderOpen, LayoutDashboard, LogOut, MessageSquareText, Plus, ReceiptText,
+  RefreshCcw, ShieldCheck, Sparkles, UserCog, UsersRound, Loader2, Wallet
 } from "lucide-react";
 import { Button } from "@/components/Button";
 import { cn } from "@/lib/utils";
@@ -15,9 +16,10 @@ type Client = { id: string; name: string; email?: string; phone?: string; compan
 type Lead = { id: string; name: string; email?: string; phone?: string; serviceInterest?: string; message?: string; status: string; source: string };
 type ServiceRow = { id: string; serviceType: string; status: string; priority: string; assignedTo?: string; deadline?: string; client: { name: string } };
 type FollowUp = { id: string; step: string; dueDate: string; client: { name: string } };
+type InvoiceRow = { id: string; amount: number; status: string; paidAt?: string; createdAt: string; quote: { client: { name: string } } };
 
 const modules = [
-  { name: "Dashboard", icon: LayoutDashboard, detail: "Stats cards, today's tasks, recent activity feed, quick action buttons" },
+  { name: "Dashboard", icon: LayoutDashboard, detail: "Revenue, active clients, pending tasks, quick actions" },
   { name: "Clients", icon: UsersRound, detail: "Search, filters, CRUD-ready client table, source, linked services count" },
   { name: "Service Pipeline", icon: ClipboardList, detail: "Kanban: New, Assigned, In Progress, Under Review, Completed, Delivered" },
   { name: "Visa Tracker", icon: FileBadge, detail: "Visa status, expiry alerts at 60/30/14/7 days, bulk actions" },
@@ -40,6 +42,35 @@ const bizTypes = ["trade","tech","consulting","holding","media","services","othe
 const sources = ["direct","website","referral","walk-in","social","call"];
 const placeholders = ["Visa Tracker","Company Formation","License Calendar","Attestation Pipeline","Compliance Calendar","Documents","Communication Log","Staff & Performance"];
 
+const inputClass = "rounded-md border border-edge bg-base px-3 py-2 text-sm text-heading placeholder:text-muted focus:border-gold focus:outline-none";
+
+const currency = (value: number) =>
+  new Intl.NumberFormat("en-AE", { style: "currency", currency: "AED", maximumFractionDigits: 0 }).format(value || 0);
+
+function revenueTotals(invoices: InvoiceRow[] = []) {
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  let today = 0, month = 0, ytd = 0;
+  for (const inv of invoices) {
+    if (inv.status !== "paid") continue;
+    const paidOn = new Date(inv.paidAt || inv.createdAt);
+    const amount = Number(inv.amount) || 0;
+    if (paidOn >= startOfYear) ytd += amount;
+    if (paidOn >= startOfMonth) month += amount;
+    if (paidOn >= startOfDay) today += amount;
+  }
+  return { today, month, ytd };
+}
+
+function pendingTaskCounts(data: any) {
+  const openServices = ((data?.services ?? []) as ServiceRow[]).filter((s) => !["completed", "delivered"].includes(s.status)).length;
+  const pendingInvoices = ((data?.invoices ?? []) as InvoiceRow[]).filter((i) => i.status !== "paid").length;
+  const dueSoon = ((data?.followUps ?? []) as FollowUp[]).filter((f) => new Date(f.dueDate).getTime() <= Date.now() + 1000 * 60 * 60 * 24 * 7).length;
+  return { openServices, pendingInvoices, dueSoon, total: openServices + pendingInvoices + dueSoon };
+}
+
 export function AdminPanel({ role, stats: initialStats }: { role?: string; stats: Stats }) {
   const [active, setActive] = useState("Dashboard");
   const [data, setData] = useState<any>(null);
@@ -55,6 +86,8 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
   useEffect(() => { fetchData(); }, [active]);
 
   const activeModule = useMemo(() => modules.find(m => m.name === active) ?? modules[0], [active]);
+  const revenue = useMemo(() => revenueTotals(data?.invoices), [data]);
+  const pending = useMemo(() => pendingTaskCounts(data), [data]);
 
   const exportCSV = () => {
     if (!data?.clients) return;
@@ -79,91 +112,180 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
   };
 
   return (
-    <main className="min-h-screen bg-mist">
+    <main className="min-h-screen bg-base text-body">
       <div className="grid lg:grid-cols-[280px_1fr]">
-        <aside className="border-r border-navy/10 bg-white p-5">
-          <h1 className="text-xl font-bold text-navy">PRO Admin</h1>
-          <p className="mt-2 text-sm text-ink/55">Role: {role}</p>
+        <aside className="glass-panel border-r border-edge p-5 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-gold/40 bg-gold/10 text-gold">
+              <Sparkles size={18} />
+            </span>
+            <div>
+              <h1 className="font-heading text-lg font-bold text-heading">PRO Admin</h1>
+              <p className="text-xs text-muted">Role: {role ?? "staff"}</p>
+            </div>
+          </div>
           <nav className="mt-7 grid gap-1">
-            {modules.map(m => { const I=m.icon; return (
-              <button key={m.name} onClick={()=>setActive(m.name)} className={cn("flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-semibold",active===m.name?"bg-gold text-navy":"text-ink/65 hover:bg-mist hover:text-navy")}><I size={17}/> {m.name}</button>
+            {modules.map(m => { const I=m.icon; const isActive = active === m.name; return (
+              <button
+                key={m.name}
+                onClick={()=>setActive(m.name)}
+                className={cn(
+                  "flex items-center gap-3 rounded-md border px-3 py-2 text-left text-sm font-semibold transition",
+                  isActive ? "border-gold/30 bg-gold/15 text-gold" : "border-transparent text-muted hover:border-edge hover:bg-panel hover:text-heading"
+                )}
+              >
+                <I size={17}/> {m.name}
+              </button>
             );})}
           </nav>
         </aside>
 
         <section className="p-5 md:p-8">
           <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
-            <div><h2 className="text-2xl font-semibold text-navy">{activeModule.name}</h2><p className="text-ink/60 text-sm">{activeModule.detail}</p></div>
+            <div>
+              <h2 className="font-heading text-2xl font-semibold text-heading">{activeModule.name}</h2>
+              <p className="text-sm text-muted">{activeModule.detail}</p>
+            </div>
             <div className="flex gap-2 flex-wrap">
-              <button onClick={()=>{setShowNewClient(true);}} className="inline-flex items-center gap-2 rounded-md bg-gold px-3 py-2 text-sm font-semibold text-navy"><Plus size={16}/> New Client</button>
-              <button onClick={()=>{setShowNewQuote(true);setActive("Quotes & Invoices");}} className="inline-flex items-center gap-2 rounded-md border border-navy/15 bg-white px-3 py-2 text-sm font-semibold text-navy"><FileText size={16}/> New Quote</button>
-              <button onClick={exportCSV} className="inline-flex items-center gap-2 rounded-md border border-navy/15 bg-white px-3 py-2 text-sm font-semibold text-navy"><Download size={16}/> Export</button>
-              <button onClick={()=>signOut({callbackUrl:"/admin"})} className="inline-flex items-center gap-2 rounded-md border border-navy/15 bg-white px-3 py-2 text-sm font-semibold text-navy"><LogOut size={16}/></button>
+              <Button onClick={()=>setShowNewClient(true)}><Plus size={16}/> New Client</Button>
+              <Button variant="outline" onClick={()=>{setShowNewQuote(true);setActive("Quotes & Invoices");}}><FileText size={16}/> New Quote</Button>
+              <Button variant="outline" onClick={exportCSV}><Download size={16}/> Export</Button>
+              <Button variant="ghost" onClick={()=>signOut({callbackUrl:"/admin"})}><LogOut size={16}/></Button>
             </div>
           </div>
 
-          {loading ? <div className="flex items-center gap-3 text-ink/50"><Loader2 className="animate-spin" size={20}/> Loading...</div> : null}
+          {loading ? <div className="mb-4 flex items-center gap-3 text-sm text-muted"><Loader2 className="animate-spin" size={18}/> Loading...</div> : null}
 
           {/* MODALS */}
           {showNewClient && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={()=>setShowNewClient(false)}>
-              <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4 shadow-2xl" onClick={e=>e.stopPropagation()}>
-                <h3 className="text-xl font-bold text-navy mb-4">New Client Intake</h3>
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={()=>setShowNewClient(false)}>
+              <motion.div
+                initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                className="glass-panel w-full max-w-lg mx-4 rounded-lg p-6 shadow-soft"
+                onClick={e=>e.stopPropagation()}
+              >
+                <h3 className="text-xl font-heading font-bold text-heading mb-4">New Client Intake</h3>
                 <form className="grid gap-3" onSubmit={handleNewClient}>
-                  <input name="name" placeholder="Full Name *" className="rounded-md border px-3 py-2 text-sm" required/>
-                  <div className="grid grid-cols-2 gap-3"><input name="email" type="email" placeholder="Email" className="rounded-md border px-3 py-2 text-sm"/><input name="phone" placeholder="Phone" className="rounded-md border px-3 py-2 text-sm"/></div>
-                  <div className="grid grid-cols-2 gap-3"><input name="company" placeholder="Company" className="rounded-md border px-3 py-2 text-sm"/><select name="businessType" className="rounded-md border px-3 py-2 text-sm"><option value="">Business Type</option>{bizTypes.map(t=><option key={t} value={t}>{t}</option>)}</select></div>
-                  <select name="source" className="rounded-md border px-3 py-2 text-sm">{sources.map(s=><option key={s} value={s}>{s}</option>)}</select>
-                  <textarea name="notes" placeholder="Notes" className="rounded-md border px-3 py-2 text-sm h-20"/>
-                  <button type="submit" className="rounded-md bg-gold px-4 py-2 text-sm font-semibold text-navy">Add Client</button>
+                  <input name="name" placeholder="Full Name *" className={inputClass} required/>
+                  <div className="grid grid-cols-2 gap-3"><input name="email" type="email" placeholder="Email" className={inputClass}/><input name="phone" placeholder="Phone" className={inputClass}/></div>
+                  <div className="grid grid-cols-2 gap-3"><input name="company" placeholder="Company" className={inputClass}/><select name="businessType" className={inputClass}><option value="">Business Type</option>{bizTypes.map(t=><option key={t} value={t}>{t}</option>)}</select></div>
+                  <select name="source" className={inputClass}>{sources.map(s=><option key={s} value={s}>{s}</option>)}</select>
+                  <textarea name="notes" placeholder="Notes" className={cn(inputClass,"h-20")}/>
+                  <Button type="submit">Add Client</Button>
                 </form>
-              </div>
+              </motion.div>
             </div>
           )}
           {showNewQuote && data && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={()=>setShowNewQuote(false)}>
-              <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4 shadow-2xl" onClick={e=>e.stopPropagation()}>
-                <h3 className="text-xl font-bold text-navy mb-4">Generate Quote & Invoice</h3>
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={()=>setShowNewQuote(false)}>
+              <motion.div
+                initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                className="glass-panel w-full max-w-lg mx-4 rounded-lg p-6 shadow-soft"
+                onClick={e=>e.stopPropagation()}
+              >
+                <h3 className="text-xl font-heading font-bold text-heading mb-4">Generate Quote & Invoice</h3>
                 <form className="grid gap-3" onSubmit={handleNewQuote}>
-                  <select name="clientId" className="rounded-md border px-3 py-2 text-sm" required><option value="">Select Client</option>{data.clients?.map((c:any)=><option key={c.id} value={c.id}>{c.name}{c.company?` (${c.company})`:""}</option>)}</select>
-                  <input name="services" placeholder="Services: Trade License, Visa Stamping..." className="rounded-md border px-3 py-2 text-sm" required/>
-                  <div className="grid grid-cols-2 gap-3"><input name="govFees" type="number" step="0.01" placeholder="Govt Fees (AED)" className="rounded-md border px-3 py-2 text-sm"/><input name="proFees" type="number" step="0.01" placeholder="PRO Fees (AED)" className="rounded-md border px-3 py-2 text-sm"/></div>
-                  <button type="submit" className="rounded-md bg-gold px-4 py-2 text-sm font-semibold text-navy">Generate</button>
+                  <select name="clientId" className={inputClass} required><option value="">Select Client</option>{data.clients?.map((c:any)=><option key={c.id} value={c.id}>{c.name}{c.company?` (${c.company})`:""}</option>)}</select>
+                  <input name="services" placeholder="Services: Trade License, Visa Stamping..." className={inputClass} required/>
+                  <div className="grid grid-cols-2 gap-3"><input name="govFees" type="number" step="0.01" placeholder="Govt Fees (AED)" className={inputClass}/><input name="proFees" type="number" step="0.01" placeholder="PRO Fees (AED)" className={inputClass}/></div>
+                  <Button type="submit">Generate</Button>
                 </form>
-              </div>
+              </motion.div>
             </div>
           )}
 
-          {/* DASHBOARD */}
-          {active==="Dashboard" && <>
-            <div className="grid gap-4 md:grid-cols-5 mb-8">{[["Clients",initialStats.clients],["Services",initialStats.services],["Leads",initialStats.leads],["Contacts",initialStats.contacts],["Quote Reqs",initialStats.quoteReqs]].map(([l,v])=>(<div key={l} className="rounded-lg border bg-white p-4"><p className="text-sm text-ink/50">{l}</p><p className="text-3xl font-bold text-navy mt-1">{v as number}</p></div>))}</div>
-            <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
-              <div className="rounded-lg border bg-white p-6"><h3 className="font-semibold text-navy text-lg">Pipeline Overview</h3><div className="mt-4 grid gap-3 md:grid-cols-3">{["New","In Progress","Completed"].map(s=><div key={s} className="rounded-md border bg-mist p-3"><p className="text-sm font-semibold text-navy">{s}</p><p className="text-xs text-ink/50 mt-1">{data?.services?.filter((x:ServiceRow)=>x.status===s.toLowerCase().replace(" ","_")).length||0} items</p></div>)}</div></div>
-              <aside className="space-y-4">
-                <div className="rounded-lg border bg-white p-5"><h3 className="font-semibold text-navy">Quick Links</h3><div className="mt-3 grid grid-cols-2 gap-1.5">{links.map((l,i)=><a key={l} href={urls[i]} target="_blank" className="rounded border px-2 py-1.5 text-xs font-medium text-navy hover:border-gold">{l}</a>)}</div></div>
-                <div className="rounded-lg border bg-white p-5"><h3 className="font-semibold text-navy">Quick Actions</h3><div className="mt-3 grid gap-2"><Button onClick={()=>{setShowNewClient(true)}}>New Client</Button><Button variant="outline" onClick={()=>{setShowNewQuote(true);setActive("Quotes & Invoices")}}>Generate Quote</Button><Button variant="outline" onClick={exportCSV}>Export CSV</Button></div></div>
-              </aside>
-            </div>
-          </>}
+          <AnimatePresence mode="wait">
+            <motion.div key={active} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
 
-          {/* TABLES */}
-          {active==="Clients" && data && <div className="bg-white rounded-lg border overflow-hidden"><table className="w-full text-sm"><thead className="bg-mist text-navy"><tr><th className="px-4 py-3">Name</th><th className="px-4 py-3 hidden sm:table-cell">Email</th><th className="px-4 py-3 hidden sm:table-cell">Phone</th><th className="px-4 py-3 hidden md:table-cell">Company</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Source</th></tr></thead><tbody>{data.clients?.map((c:Client)=><tr key={c.id}><td className="px-4 py-3 font-medium text-navy">{c.name}</td><td className="px-4 py-3 hidden sm:table-cell text-ink/60">{c.email||"-"}</td><td className="px-4 py-3 hidden sm:table-cell text-ink/60">{c.phone||"-"}</td><td className="px-4 py-3 hidden md:table-cell text-ink/60">{c.company||"-"}</td><td className="px-4 py-3 text-xs">{c.businessType||"-"}</td><td className="px-4 py-3"><span className="bg-gold/10 text-navy text-xs px-2 py-0.5 rounded-full">{c.source||"-"}</span></td></tr>)}</tbody></table></div>}
+              {/* DASHBOARD */}
+              {active==="Dashboard" && (
+                <div className="space-y-6">
+                  <div className="grid gap-4 md:grid-cols-3">
+                    {([["Today", revenue.today], ["This Month", revenue.month], ["Year to Date", revenue.ytd]] as [string, number][]).map(([label, value], i) => (
+                      <motion.div
+                        key={label}
+                        className="glass-panel rounded-lg p-5 shadow-soft"
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted">{label} Revenue</p>
+                          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-gold/15 text-gold"><Wallet size={16}/></span>
+                        </div>
+                        <p className="mt-3 font-heading text-3xl font-bold text-heading">{currency(value)}</p>
+                      </motion.div>
+                    ))}
+                  </div>
 
-          {active==="Service Pipeline" && data && <div className="bg-white rounded-lg border overflow-hidden"><table className="w-full text-sm"><thead className="bg-mist text-navy"><tr><th className="px-4 py-3">Client</th><th className="px-4 py-3">Service</th><th className="px-4 py-3 hidden sm:table-cell">Assigned</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 hidden md:table-cell">Deadline</th></tr></thead><tbody>{data.services?.map((s:ServiceRow)=><tr key={s.id}><td className="px-4 py-3 font-medium text-navy">{s.client.name}</td><td className="px-4 py-3">{s.serviceType}</td><td className="px-4 py-3 hidden sm:table-cell text-ink/60">{s.assignedTo||"-"}</td><td className="px-4 py-3"><span className={cn("text-xs px-2 py-0.5 rounded-full",s.status==="in_progress"?"bg-blue-50 text-blue-700":"bg-green-50 text-green-700")}>{s.status}</span></td><td className="px-4 py-3 hidden md:table-cell text-ink/60">{s.deadline?new Date(s.deadline).toLocaleDateString():"-"}</td></tr>)}</tbody></table></div>}
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="glass-panel rounded-lg p-5 shadow-soft">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted">Active Clients</p>
+                      <p className="mt-2 font-heading text-3xl font-bold text-heading">{initialStats.clients}</p>
+                      <p className="mt-1 text-xs text-gold">{initialStats.leads} leads in pipeline</p>
+                    </div>
+                    <div className="glass-panel rounded-lg p-5 shadow-soft">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted">Pending Tasks</p>
+                      <p className="mt-2 font-heading text-3xl font-bold text-heading">{pending.total}</p>
+                      <p className="mt-1 text-xs text-muted">{pending.openServices} open &middot; {pending.pendingInvoices} unpaid &middot; {pending.dueSoon} due soon</p>
+                    </div>
+                    <div className="glass-panel rounded-lg p-5 shadow-soft">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted">Quote Requests</p>
+                      <p className="mt-2 font-heading text-3xl font-bold text-heading">{initialStats.quoteReqs}</p>
+                      <p className="mt-1 text-xs text-muted">{initialStats.contacts} contact messages</p>
+                    </div>
+                  </div>
 
-          {active==="Leads" && data && <div className="bg-white rounded-lg border overflow-hidden"><table className="w-full text-sm"><thead className="bg-mist text-navy"><tr><th className="px-4 py-3">Name</th><th className="px-4 py-3 hidden sm:table-cell">Email</th><th className="px-4 py-3 hidden sm:table-cell">Phone</th><th className="px-4 py-3 hidden md:table-cell">Interest</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Source</th></tr></thead><tbody>{data.leads?.map((l:Lead)=><tr key={l.id}><td className="px-4 py-3 font-medium text-navy">{l.name}</td><td className="px-4 py-3 hidden sm:table-cell text-ink/60">{l.email||"-"}</td><td className="px-4 py-3 hidden sm:table-cell text-ink/60">{l.phone||"-"}</td><td className="px-4 py-3 hidden md:table-cell text-ink/60">{l.serviceInterest||"-"}</td><td className="px-4 py-3">{l.status}</td><td className="px-4 py-3"><span className="bg-gold/10 text-navy text-xs px-2 py-0.5 rounded-full">{l.source}</span></td></tr>)}</tbody></table></div>}
+                  <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
+                    <div className="glass-panel rounded-lg p-6 shadow-soft">
+                      <h3 className="font-heading font-semibold text-heading text-lg">Pipeline Overview</h3>
+                      <div className="mt-4 grid gap-3 md:grid-cols-3">{["New","In Progress","Completed"].map(s=>(
+                        <div key={s} className="rounded-md border border-edge bg-panel p-3">
+                          <p className="text-sm font-semibold text-heading">{s}</p>
+                          <p className="text-xs text-muted mt-1">{data?.services?.filter((x:ServiceRow)=>x.status===s.toLowerCase().replace(" ","_")).length||0} items</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                    <aside className="space-y-4">
+                      <div className="glass-panel rounded-lg p-5 shadow-soft">
+                        <h3 className="font-heading font-semibold text-heading">Quick Links</h3>
+                        <div className="mt-3 grid grid-cols-2 gap-1.5">{links.map((l,i)=><a key={l} href={urls[i]} target="_blank" rel="noreferrer" className="rounded border border-edge px-2 py-1.5 text-xs font-medium text-body hover:border-gold hover:text-gold">{l}</a>)}</div>
+                      </div>
+                      <div className="glass-panel rounded-lg p-5 shadow-soft">
+                        <h3 className="font-heading font-semibold text-heading">Quick Actions</h3>
+                        <div className="mt-3 grid gap-2">
+                          <Button onClick={()=>{setShowNewClient(true)}}>New Client</Button>
+                          <Button variant="outline" onClick={()=>{setShowNewQuote(true);setActive("Quotes & Invoices")}}>Generate Quote</Button>
+                          <Button variant="outline" onClick={exportCSV}>Export CSV</Button>
+                        </div>
+                      </div>
+                    </aside>
+                  </div>
+                </div>
+              )}
 
-          {active==="Quotes & Invoices" && data && <div className="space-y-6">
-            <div className="bg-white rounded-lg border overflow-hidden"><h3 className="px-4 py-3 font-semibold text-navy border-b">Quote Requests (Website)</h3><table className="w-full text-sm"><thead className="bg-mist"><tr><th className="px-4 py-3">Name</th><th className="px-4 py-3 hidden sm:table-cell">Email</th><th className="px-4 py-3 hidden sm:table-cell">Company</th><th className="px-4 py-3 hidden md:table-cell">Service</th><th className="px-4 py-3">Date</th></tr></thead><tbody>{data.quoteReqs?.map((q:any)=><tr key={q.id}><td className="px-4 py-3 font-medium">{q.name}</td><td className="px-4 py-3 hidden sm:table-cell text-ink/60">{q.email}</td><td className="px-4 py-3 hidden sm:table-cell text-ink/60">{q.company||"-"}</td><td className="px-4 py-3 hidden md:table-cell text-ink/60">{q.serviceInterest||"-"}</td><td className="px-4 py-3 text-ink/60">{new Date(q.createdAt).toLocaleDateString()}</td></tr>)}</tbody></table></div>
-            <div className="bg-white rounded-lg border overflow-hidden"><h3 className="px-4 py-3 font-semibold text-navy border-b">Generated Quotes</h3><table className="w-full text-sm"><thead className="bg-mist"><tr><th className="px-4 py-3">Client</th><th className="px-4 py-3 hidden sm:table-cell">Services</th><th className="px-4 py-3">Govt</th><th className="px-4 py-3">PRO</th><th className="px-4 py-3">Total</th><th className="px-4 py-3">PDF</th></tr></thead><tbody>{data.quotesList?.map((q:any)=><tr key={q.id}><td className="px-4 py-3 font-medium">{q.client.name}</td><td className="px-4 py-3 hidden sm:table-cell text-ink/60 text-xs">{q.services}</td><td className="px-4 py-3">AED {q.govFees}</td><td className="px-4 py-3">AED {q.proFees}</td><td className="px-4 py-3 font-bold">AED {q.total}</td><td className="px-4 py-3"><a href={`/api/admin/quote/pdf?id=${q.id}`} target="_blank" className="text-gold font-semibold text-xs hover:underline">Download PDF</a></td></tr>)}</tbody></table></div>
-            <div className="bg-white rounded-lg border overflow-hidden"><h3 className="px-4 py-3 font-semibold text-navy border-b">Invoices</h3><table className="w-full text-sm"><thead className="bg-mist"><tr><th className="px-4 py-3">Invoice #</th><th className="px-4 py-3">Client</th><th className="px-4 py-3">Amount</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">PDF</th></tr></thead><tbody>{data.invoices?.map((inv:any)=><tr key={inv.id}><td className="px-4 py-3 font-medium">INV-{inv.id.slice(0,8)}</td><td className="px-4 py-3">{inv.quote.client.name}</td><td className="px-4 py-3 font-bold">AED {inv.amount}</td><td className="px-4 py-3"><span className={inv.status==="paid"?"bg-green-50 text-green-700 text-xs px-2 py-0.5 rounded-full":"bg-amber-50 text-amber-700 text-xs px-2 py-0.5 rounded-full"}>{inv.status}</span></td><td className="px-4 py-3"><a href={`/api/admin/invoice/pdf?id=${inv.id}`} target="_blank" className="text-gold font-semibold text-xs hover:underline">Download PDF</a></td></tr>)}</tbody></table></div>
-          </div>}
+              {/* TABLES */}
+              {active==="Clients" && data && <div className="glass-panel rounded-lg overflow-hidden shadow-soft"><table className="w-full text-sm"><thead className="bg-panel text-heading"><tr><th className="px-4 py-3 text-left">Name</th><th className="px-4 py-3 hidden sm:table-cell text-left">Email</th><th className="px-4 py-3 hidden sm:table-cell text-left">Phone</th><th className="px-4 py-3 hidden md:table-cell text-left">Company</th><th className="px-4 py-3 text-left">Type</th><th className="px-4 py-3 text-left">Source</th></tr></thead><tbody className="divide-y divide-edge">{data.clients?.map((c:Client)=><tr key={c.id}><td className="px-4 py-3 font-medium text-heading">{c.name}</td><td className="px-4 py-3 hidden sm:table-cell text-muted">{c.email||"-"}</td><td className="px-4 py-3 hidden sm:table-cell text-muted">{c.phone||"-"}</td><td className="px-4 py-3 hidden md:table-cell text-muted">{c.company||"-"}</td><td className="px-4 py-3 text-xs text-body">{c.businessType||"-"}</td><td className="px-4 py-3"><span className="bg-gold/10 text-gold text-xs px-2 py-0.5 rounded-full">{c.source||"-"}</span></td></tr>)}</tbody></table></div>}
 
-          {active==="Follow-ups" && data && <div className="bg-white rounded-lg border overflow-hidden"><table className="w-full text-sm"><thead className="bg-mist"><tr><th className="px-4 py-3">Client</th><th className="px-4 py-3">Step</th><th className="px-4 py-3">Due</th></tr></thead><tbody>{data.followUps?.map((f:FollowUp)=><tr key={f.id}><td className="px-4 py-3 font-medium">{f.client.name}</td><td className="px-4 py-3">{f.step}</td><td className="px-4 py-3 text-ink/60">{new Date(f.dueDate).toLocaleDateString()}</td></tr>)}</tbody></table></div>}
+              {active==="Service Pipeline" && data && <div className="glass-panel rounded-lg overflow-hidden shadow-soft"><table className="w-full text-sm"><thead className="bg-panel text-heading"><tr><th className="px-4 py-3 text-left">Client</th><th className="px-4 py-3 text-left">Service</th><th className="px-4 py-3 hidden sm:table-cell text-left">Assigned</th><th className="px-4 py-3 text-left">Status</th><th className="px-4 py-3 hidden md:table-cell text-left">Deadline</th></tr></thead><tbody className="divide-y divide-edge">{data.services?.map((s:ServiceRow)=><tr key={s.id}><td className="px-4 py-3 font-medium text-heading">{s.client.name}</td><td className="px-4 py-3 text-body">{s.serviceType}</td><td className="px-4 py-3 hidden sm:table-cell text-muted">{s.assignedTo||"-"}</td><td className="px-4 py-3"><span className={cn("text-xs px-2 py-0.5 rounded-full",s.status==="in_progress"?"bg-blue-500/15 text-blue-300":"bg-emerald-500/15 text-emerald-300")}>{s.status}</span></td><td className="px-4 py-3 hidden md:table-cell text-muted">{s.deadline?new Date(s.deadline).toLocaleDateString():"-"}</td></tr>)}</tbody></table></div>}
 
-          {placeholders.includes(active) && <div className="rounded-lg border bg-white p-8 text-center"><p className="text-ink/50 text-lg">Coming Soon</p><p className="text-ink/40 text-sm mt-2">Database schema ready. Next phase build.</p></div>}
+              {active==="Leads" && data && <div className="glass-panel rounded-lg overflow-hidden shadow-soft"><table className="w-full text-sm"><thead className="bg-panel text-heading"><tr><th className="px-4 py-3 text-left">Name</th><th className="px-4 py-3 hidden sm:table-cell text-left">Email</th><th className="px-4 py-3 hidden sm:table-cell text-left">Phone</th><th className="px-4 py-3 hidden md:table-cell text-left">Interest</th><th className="px-4 py-3 text-left">Status</th><th className="px-4 py-3 text-left">Source</th></tr></thead><tbody className="divide-y divide-edge">{data.leads?.map((l:Lead)=><tr key={l.id}><td className="px-4 py-3 font-medium text-heading">{l.name}</td><td className="px-4 py-3 hidden sm:table-cell text-muted">{l.email||"-"}</td><td className="px-4 py-3 hidden sm:table-cell text-muted">{l.phone||"-"}</td><td className="px-4 py-3 hidden md:table-cell text-muted">{l.serviceInterest||"-"}</td><td className="px-4 py-3 text-body">{l.status}</td><td className="px-4 py-3"><span className="bg-gold/10 text-gold text-xs px-2 py-0.5 rounded-full">{l.source}</span></td></tr>)}</tbody></table></div>}
 
-          {active==="Reports" && <div className="grid gap-5 md:grid-cols-3">{[["Total Clients",initialStats.clients],["Total Leads",initialStats.leads],["Contacts",initialStats.contacts],["Quote Requests",initialStats.quoteReqs],["Active Services",initialStats.services]].map(([l,v])=><div key={l} className="rounded-lg border bg-white p-5"><p className="text-sm text-ink/50">{l}</p><p className="text-3xl font-bold text-navy">{v as number}</p></div>)}</div>}
+              {active==="Quotes & Invoices" && data && <div className="space-y-6">
+                <div className="glass-panel rounded-lg overflow-hidden shadow-soft"><h3 className="px-4 py-3 font-heading font-semibold text-heading border-b border-edge">Quote Requests (Website)</h3><table className="w-full text-sm"><thead className="bg-panel"><tr><th className="px-4 py-3 text-left text-heading">Name</th><th className="px-4 py-3 hidden sm:table-cell text-left text-heading">Email</th><th className="px-4 py-3 hidden sm:table-cell text-left text-heading">Company</th><th className="px-4 py-3 hidden md:table-cell text-left text-heading">Service</th><th className="px-4 py-3 text-left text-heading">Date</th></tr></thead><tbody className="divide-y divide-edge">{data.quoteReqs?.map((q:any)=><tr key={q.id}><td className="px-4 py-3 font-medium text-heading">{q.name}</td><td className="px-4 py-3 hidden sm:table-cell text-muted">{q.email}</td><td className="px-4 py-3 hidden sm:table-cell text-muted">{q.company||"-"}</td><td className="px-4 py-3 hidden md:table-cell text-muted">{q.serviceInterest||"-"}</td><td className="px-4 py-3 text-muted">{new Date(q.createdAt).toLocaleDateString()}</td></tr>)}</tbody></table></div>
+                <div className="glass-panel rounded-lg overflow-hidden shadow-soft"><h3 className="px-4 py-3 font-heading font-semibold text-heading border-b border-edge">Generated Quotes</h3><table className="w-full text-sm"><thead className="bg-panel"><tr><th className="px-4 py-3 text-left text-heading">Client</th><th className="px-4 py-3 hidden sm:table-cell text-left text-heading">Services</th><th className="px-4 py-3 text-left text-heading">Govt</th><th className="px-4 py-3 text-left text-heading">PRO</th><th className="px-4 py-3 text-left text-heading">Total</th><th className="px-4 py-3 text-left text-heading">PDF</th></tr></thead><tbody className="divide-y divide-edge">{data.quotesList?.map((q:any)=><tr key={q.id}><td className="px-4 py-3 font-medium text-heading">{q.client.name}</td><td className="px-4 py-3 hidden sm:table-cell text-muted text-xs">{q.services}</td><td className="px-4 py-3 text-body">AED {q.govFees}</td><td className="px-4 py-3 text-body">AED {q.proFees}</td><td className="px-4 py-3 font-bold text-heading">AED {q.total}</td><td className="px-4 py-3"><a href={`/api/admin/quote/pdf?id=${q.id}`} target="_blank" className="text-gold font-semibold text-xs hover:underline">Download PDF</a></td></tr>)}</tbody></table></div>
+                <div className="glass-panel rounded-lg overflow-hidden shadow-soft"><h3 className="px-4 py-3 font-heading font-semibold text-heading border-b border-edge">Invoices</h3><table className="w-full text-sm"><thead className="bg-panel"><tr><th className="px-4 py-3 text-left text-heading">Invoice #</th><th className="px-4 py-3 text-left text-heading">Client</th><th className="px-4 py-3 text-left text-heading">Amount</th><th className="px-4 py-3 text-left text-heading">Status</th><th className="px-4 py-3 text-left text-heading">PDF</th></tr></thead><tbody className="divide-y divide-edge">{data.invoices?.map((inv:any)=><tr key={inv.id}><td className="px-4 py-3 font-medium text-heading">INV-{inv.id.slice(0,8)}</td><td className="px-4 py-3 text-body">{inv.quote.client.name}</td><td className="px-4 py-3 font-bold text-heading">AED {inv.amount}</td><td className="px-4 py-3"><span className={inv.status==="paid"?"bg-emerald-500/15 text-emerald-300 text-xs px-2 py-0.5 rounded-full":"bg-amber-500/15 text-amber-300 text-xs px-2 py-0.5 rounded-full"}>{inv.status}</span></td><td className="px-4 py-3"><a href={`/api/admin/invoice/pdf?id=${inv.id}`} target="_blank" className="text-gold font-semibold text-xs hover:underline">Download PDF</a></td></tr>)}</tbody></table></div>
+              </div>}
+
+              {active==="Follow-ups" && data && <div className="glass-panel rounded-lg overflow-hidden shadow-soft"><table className="w-full text-sm"><thead className="bg-panel"><tr><th className="px-4 py-3 text-left text-heading">Client</th><th className="px-4 py-3 text-left text-heading">Step</th><th className="px-4 py-3 text-left text-heading">Due</th></tr></thead><tbody className="divide-y divide-edge">{data.followUps?.map((f:FollowUp)=><tr key={f.id}><td className="px-4 py-3 font-medium text-heading">{f.client.name}</td><td className="px-4 py-3 text-body">{f.step}</td><td className="px-4 py-3 text-muted">{new Date(f.dueDate).toLocaleDateString()}</td></tr>)}</tbody></table></div>}
+
+              {placeholders.includes(active) && <div className="glass-panel rounded-lg p-8 text-center shadow-soft"><p className="text-muted text-lg">Coming Soon</p><p className="text-muted/70 text-sm mt-2">Database schema ready. Next phase build.</p></div>}
+
+              {active==="Reports" && <div className="grid gap-5 md:grid-cols-3">{[["Total Clients",initialStats.clients],["Total Leads",initialStats.leads],["Contacts",initialStats.contacts],["Quote Requests",initialStats.quoteReqs],["Active Services",initialStats.services]].map(([l,v])=><div key={l} className="glass-panel rounded-lg p-5 shadow-soft"><p className="text-sm text-muted">{l}</p><p className="text-3xl font-heading font-bold text-heading">{v as number}</p></div>)}</div>}
+            </motion.div>
+          </AnimatePresence>
         </section>
       </div>
     </main>
