@@ -9,9 +9,9 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const styles = {
-  primary: "bg-gold text-navy shadow-gold hover:bg-[#dba700]",
-  outline: "border border-navy/20 bg-white text-navy hover:border-gold hover:text-navy",
-  ghost: "bg-transparent text-navy hover:bg-navy/5"
+  primary: "bg-gold text-navy shadow-gold hover:bg-[#b7963f]",
+  outline: "border border-edge bg-glass text-heading hover:border-gold hover:text-gold",
+  ghost: "bg-transparent text-heading hover:bg-edge"
 };
 
 export function Button({ href, variant = "primary", className, children, ...props }: Props) {
