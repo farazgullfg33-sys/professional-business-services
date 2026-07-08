@@ -41,6 +41,14 @@ export default function HomePage() {
             <Button href="/quote">Get Free Consultation</Button>
             <Button href="/services" variant="outline">Our Services</Button>
           </div>
+          <a
+            href="https://aiinvention.tech"
+            target="_blank"
+            rel="noreferrer"
+            className="mx-auto mt-6 inline-flex items-center gap-2 rounded-full border border-gold/40 bg-glass px-4 py-1.5 text-xs font-semibold text-gold transition hover:border-gold"
+          >
+            Technology Partner: AI Invention
+          </a>
         </div>
         <div className="section-shell relative -mt-6 grid gap-5 rounded-lg border border-edge bg-glass p-6 shadow-soft backdrop-blur md:grid-cols-4">
           {aiStats.map((stat) => <StatsCounter key={stat.label} {...stat} />)}

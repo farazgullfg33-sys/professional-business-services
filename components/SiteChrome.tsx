@@ -105,7 +105,16 @@ export function Footer() {
           </div>
         </div>
       </div>
-      <div className="border-t border-white/10 py-5 text-center text-sm text-white/70">{company.copyright}</div>
+      <div className="border-t border-white/10 py-5 text-center text-sm text-white/70">
+        <p>{company.copyright}</p>
+        <p className="mt-1">
+          Powered by{" "}
+          <a href="https://aiinvention.tech" target="_blank" rel="noreferrer" className="font-semibold text-gold hover:underline">
+            AI Invention
+          </a>{" "}
+          — UAE First AI-Powered PRO Office Platform
+        </p>
+      </div>
     </footer>
   );
 }
