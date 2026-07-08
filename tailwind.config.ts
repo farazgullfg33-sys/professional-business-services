@@ -9,17 +9,26 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        navy: "#1a3a5c",
-        gold: "#ecb401",
+        navy: "#0a1628",
+        gold: "#c9a84c",
         ink: "#1a1a2e",
-        mist: "#f8fafc"
+        mist: "#f8fafc",
+        base: "var(--bg-base)",
+        surface: "var(--bg-surface)",
+        panel: "var(--bg-panel)",
+        heading: "var(--text-heading)",
+        body: "var(--text-body)",
+        muted: "var(--text-muted)",
+        edge: "var(--border-edge)",
+        glass: "var(--glass-bg)"
       },
       fontFamily: {
-        sans: ["var(--font-poppins)", "Poppins", "sans-serif"]
+        sans: ["var(--font-plus-jakarta)", "Plus Jakarta Sans", "sans-serif"],
+        heading: ["var(--font-inter)", "Inter", "sans-serif"]
       },
       boxShadow: {
-        soft: "0 18px 50px rgba(26, 58, 92, 0.10)",
-        gold: "0 18px 40px rgba(236, 180, 1, 0.20)"
+        soft: "var(--shadow-soft)",
+        gold: "0 18px 40px rgba(201, 168, 76, 0.25)"
       }
     }
   },

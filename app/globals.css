@@ -3,10 +3,31 @@
 @tailwind utilities;
 
 :root {
+  color-scheme: dark;
+  --bg-base: #0a1628;
+  --bg-surface: #101d33;
+  --bg-panel: #0d1a2f;
+  --text-heading: #ffffff;
+  --text-body: rgba(255, 255, 255, 0.75);
+  --text-muted: rgba(255, 255, 255, 0.55);
+  --border-edge: rgba(255, 255, 255, 0.12);
+  --glass-bg: rgba(255, 255, 255, 0.06);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --shadow-soft: 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+
+html.light {
   color-scheme: light;
-  --background: #ffffff;
-  --foreground: #1a1a2e;
-  --font-poppins: "Poppins";
+  --bg-base: #ffffff;
+  --bg-surface: #ffffff;
+  --bg-panel: #f8fafc;
+  --text-heading: #0a1628;
+  --text-body: rgba(10, 22, 40, 0.72);
+  --text-muted: rgba(10, 22, 40, 0.55);
+  --border-edge: rgba(10, 22, 40, 0.1);
+  --glass-bg: rgba(10, 22, 40, 0.04);
+  --glass-border: rgba(10, 22, 40, 0.08);
+  --shadow-soft: 0 18px 50px rgba(10, 22, 40, 0.1);
 }
 
 * {
@@ -19,8 +40,9 @@ html {
 
 body {
   margin: 0;
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--bg-base);
+  color: var(--text-body);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 a {
@@ -29,11 +51,11 @@ a {
 }
 
 ::selection {
-  background: rgba(236, 180, 1, 0.28);
+  background: rgba(201, 168, 76, 0.32);
 }
 
 .gold-gradient {
-  background: linear-gradient(115deg, #ecb401 0%, #ffe18a 45%, #bf8f00 100%);
+  background: linear-gradient(115deg, #c9a84c 0%, #f0dca0 45%, #a3812f 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -44,13 +66,20 @@ a {
   margin: 0 auto;
 }
 
+.glass-panel {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
 .focus-ring {
   outline: 2px solid transparent;
   outline-offset: 2px;
 }
 
 .focus-ring:focus-visible {
-  outline-color: #ecb401;
+  outline-color: #c9a84c;
 }
 
 @media (prefers-reduced-motion: reduce) {
