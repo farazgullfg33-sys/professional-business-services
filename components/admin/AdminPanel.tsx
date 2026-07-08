@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { acquisitionFunnel, leadsBySource, monthlyRevenueSeries, staffProductivity, statusBreakdown } from "@/lib/reports";
 import { AcquisitionFunnelChart, LeadsBySourceChart, RevenueTrendChart, StaffProductivityChart, StatusBreakdownChart } from "@/components/admin/Charts";
 import { useSSE } from "@/hooks/useSSE";
+import { AdminChatbot } from "@/components/admin/AdminChatbot";
 
 type Stats = { clients: number; leads: number; contacts: number; quoteReqs: number; services: number };
 type Client = { id: string; name: string; email?: string; phone?: string; company?: string; businessType?: string; status: string; source?: string };
@@ -425,6 +426,7 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
           </AnimatePresence>
         </section>
       </div>
+      <AdminChatbot clients={data?.clients ?? []} />
     </main>
   );
 }
