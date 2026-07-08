@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { adminEventBus } from "@/lib/events";
+import { sendClientStatusUpdate } from "@/lib/whatsapp";
 
 const allowedStatuses = ["new", "in_progress", "review", "completed", "delivered"];
 
@@ -17,10 +18,17 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   const service = await prisma.serviceRequest.update({
     where: { id: params.id },
-    data: { status }
+    data: { status },
+    include: { client: { select: { name: true, phone: true } } }
   });
 
   adminEventBus.emit({ type: "updated", entity: "service" });
+
+  if (service.client.phone) {
+    sendClientStatusUpdate(service.client.phone, service.client.name, service.serviceType, status).catch((error) =>
+      console.error("WhatsApp status notification failed", error)
+    );
+  }
 
   return NextResponse.json({ ok: true, service });
 }
