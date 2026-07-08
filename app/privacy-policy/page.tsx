@@ -1,7 +1,8 @@
 import { company } from "@/lib/company";
 
 export const metadata = {
-  title: "Privacy Policy"
+  title: "Privacy Policy",
+  description: "How Professional Business Services collects, uses, and protects client information for UAE PRO, visa, and company formation services."
 };
 
 export default function PrivacyPolicyPage() {

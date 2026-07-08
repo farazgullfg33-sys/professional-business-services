@@ -1,7 +1,8 @@
 import { QuoteForm } from "@/components/QuoteForm";
 
 export const metadata = {
-  title: "Get Quote"
+  title: "Get Quote",
+  description: "Request a free quote from Professional Business Services for company formation, visa processing, licensing, or PRO services in the UAE."
 };
 
 export default function QuotePage() {

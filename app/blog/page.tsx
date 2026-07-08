@@ -3,7 +3,8 @@ import { BlogImage } from "@/components/BlogImage";
 import { blogPosts } from "@/lib/blog";
 
 export const metadata = {
-  title: "Blog"
+  title: "Blog",
+  description: "Guides and updates on UAE business setup, visa types, trade license renewal, document attestation, and PRO services."
 };
 
 export default function BlogPage() {

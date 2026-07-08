@@ -2,7 +2,8 @@ import { GlowOrb } from "@/components/motion/MotionScenes";
 import { ceoMessage } from "@/lib/company";
 
 export const metadata = {
-  title: "CEO Message"
+  title: "CEO Message",
+  description: "A message from the CEO of Professional Business Services on the company's mission to simplify UAE business setup, visas, and PRO services."
 };
 
 export default function CEOMessagePage() {

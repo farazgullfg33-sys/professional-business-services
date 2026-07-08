@@ -10,8 +10,20 @@ import { aiStats, company, serviceHighlights, testimonials } from "@/lib/company
 export default function HomePage() {
   const whatsappHref = `https://wa.me/${company.whatsapp.replace(/\D/g, "")}`;
 
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "ProfessionalService",
+    name: company.name,
+    telephone: company.phone,
+    address: { "@type": "PostalAddress", streetAddress: company.address, addressCountry: "AE" },
+    areaServed: "Abu Dhabi, United Arab Emirates",
+    url: "https://pro.aiinvention.tech",
+    sameAs: Object.values(company.social)
+  };
+
   return (
     <main>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }} />
       <section className="relative overflow-hidden bg-base">
         <HeroCanvas />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-base/10 via-base/60 to-base" />

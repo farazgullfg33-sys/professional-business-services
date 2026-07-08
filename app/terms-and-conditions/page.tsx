@@ -1,7 +1,8 @@
 import { company } from "@/lib/company";
 
 export const metadata = {
-  title: "Terms & Conditions"
+  title: "Terms & Conditions",
+  description: "Terms governing the use of Professional Business Services' website and UAE PRO, visa, and business setup services."
 };
 
 export default function TermsAndConditionsPage() {

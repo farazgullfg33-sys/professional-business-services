@@ -2,7 +2,8 @@ import { FAQAccordion } from "@/components/FAQAccordion";
 import { faqs } from "@/lib/company";
 
 export const metadata = {
-  title: "FAQ"
+  title: "FAQ",
+  description: "Answers to common questions about UAE company formation, visa processing, trade licenses, document attestation, and PRO services."
 };
 
 export default function FAQPage() {

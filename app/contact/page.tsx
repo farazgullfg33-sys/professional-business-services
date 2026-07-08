@@ -4,7 +4,8 @@ import { SectionHeading } from "@/components/SectionHeading";
 import { company } from "@/lib/company";
 
 export const metadata = {
-  title: "Contact"
+  title: "Contact",
+  description: "Contact Professional Business Services in Abu Dhabi for PRO services, visa processing, company formation, and government liaison consultations."
 };
 
 export default function ContactPage() {

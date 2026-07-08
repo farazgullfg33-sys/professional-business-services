@@ -4,7 +4,8 @@ import { CardTilt, MapPulse } from "@/components/motion/MotionScenes";
 import { serviceSections } from "@/lib/company";
 
 export const metadata = {
-  title: "Services"
+  title: "Services",
+  description: "Business setup, visa processing, PRO outsourcing, document attestation, and compliance services across Abu Dhabi and the UAE, backed by an 18-agent AI operations team."
 };
 
 export default function ServicesPage() {
