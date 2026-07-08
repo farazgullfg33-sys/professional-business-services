@@ -13,13 +13,13 @@ export function FAQAccordion() {
         const Icon = faq.icon;
         const active = open === index;
         return (
-          <article key={faq.question} className="rounded-lg border border-navy/10 bg-white shadow-sm">
+          <article key={faq.question} className="glass-panel rounded-lg">
             <button className="flex w-full items-center gap-4 px-5 py-5 text-left" onClick={() => setOpen(active ? -1 : index)}>
               <Icon className="h-5 w-5 shrink-0 text-gold" />
-              <span className="flex-1 font-semibold text-navy">{faq.question}</span>
-              <ChevronDown className={cn("h-5 w-5 text-navy transition", active && "rotate-180")} />
+              <span className="flex-1 font-semibold text-heading">{faq.question}</span>
+              <ChevronDown className={cn("h-5 w-5 text-heading transition", active && "rotate-180")} />
             </button>
-            {active ? <p className="border-t border-navy/10 px-5 py-5 leading-7 text-ink/70">{faq.answer}</p> : null}
+            {active ? <p className="border-t border-edge px-5 py-5 leading-7 text-body">{faq.answer}</p> : null}
           </article>
         );
       })}

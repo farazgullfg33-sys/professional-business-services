@@ -17,10 +17,10 @@ export default function FAQPage() {
   };
 
   return (
-    <main className="bg-mist py-20">
+    <main className="bg-panel py-20">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
       <div className="section-shell">
-        <h1 className="text-4xl font-bold text-navy md:text-5xl">Frequently Asked Questions</h1>
+        <h1 className="font-heading text-4xl font-bold text-heading md:text-5xl">Frequently Asked Questions</h1>
         <FAQAccordion />
       </div>
     </main>

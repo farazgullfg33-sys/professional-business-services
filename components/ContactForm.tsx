@@ -8,8 +8,8 @@ import { Button } from "@/components/Button";
 export function ContactForm() {
   const [status, setStatus] = useState<"idle" | "sent" | "error">("idle");
   return (
-    <div className="rounded-lg border border-navy/10 bg-white p-6 shadow-soft">
-      <div className="relative mb-6 flex h-28 items-center justify-center overflow-hidden rounded-md bg-mist">
+    <div className="glass-panel rounded-lg p-6 shadow-soft">
+      <div className="relative mb-6 flex h-28 items-center justify-center overflow-hidden rounded-md bg-panel">
         <motion.span className="absolute h-16 w-16 rounded-full border-2 border-gold" animate={{ scale: [0.8, 2.4], opacity: [0.7, 0] }} transition={{ duration: 2, repeat: Infinity }} />
         <MapPin className="relative z-10 h-10 w-10 text-gold" />
       </div>
@@ -29,13 +29,13 @@ export function ContactForm() {
           }
         }}
       >
-        <input name="name" placeholder="Name" className="w-full rounded-md border border-navy/15 px-4 py-3" />
-        <input name="email" required type="email" placeholder="Email" className="w-full rounded-md border border-navy/15 px-4 py-3" />
-        <input name="phone" placeholder="Phone" className="w-full rounded-md border border-navy/15 px-4 py-3" />
-        <textarea name="message" required placeholder="Message" className="h-36 w-full rounded-md border border-navy/15 px-4 py-3" />
+        <input name="name" placeholder="Name" className="w-full rounded-md border border-edge bg-base px-4 py-3 text-heading placeholder:text-muted" />
+        <input name="email" required type="email" placeholder="Email" className="w-full rounded-md border border-edge bg-base px-4 py-3 text-heading placeholder:text-muted" />
+        <input name="phone" placeholder="Phone" className="w-full rounded-md border border-edge bg-base px-4 py-3 text-heading placeholder:text-muted" />
+        <textarea name="message" required placeholder="Message" className="h-36 w-full rounded-md border border-edge bg-base px-4 py-3 text-heading placeholder:text-muted" />
         <Button type="submit"><Send size={18} /> Submit</Button>
-        {status === "sent" ? <p className="text-sm font-semibold text-navy">Thank you. Your message has been saved.</p> : null}
-        {status === "error" ? <p className="text-sm font-semibold text-red-600">Something went wrong. Please try again.</p> : null}
+        {status === "sent" ? <p className="text-sm font-semibold text-gold">Thank you. Your message has been saved.</p> : null}
+        {status === "error" ? <p className="text-sm font-semibold text-red-400">Something went wrong. Please try again.</p> : null}
       </form>
     </div>
   );
