@@ -7,7 +7,7 @@ export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [clients, leads, contacts, quoteReqs, services, followUps, quotesList, invoices] = await Promise.all([
+  const [clients, leads, contacts, quoteReqs, services, followUps, quotesList, invoices, documents] = await Promise.all([
     prisma.client.findMany({ orderBy: { createdAt: "desc" }, take: 50 }),
     prisma.lead.findMany({ orderBy: { createdAt: "desc" }, take: 50 }),
     prisma.contactSubmission.findMany({ orderBy: { createdAt: "desc" }, take: 50 }),
@@ -15,7 +15,8 @@ export async function GET() {
     prisma.serviceRequest.findMany({ orderBy: { createdAt: "desc" }, take: 50, include: { client: { select: { name: true } } } }),
     prisma.followUp.findMany({ orderBy: { dueDate: "asc" }, take: 50, include: { client: { select: { name: true } } } }),
     prisma.quote.findMany({ orderBy: { createdAt: "desc" }, take: 50, include: { client: { select: { name: true, company: true } } } }),
-    prisma.invoice.findMany({ orderBy: { createdAt: "desc" }, take: 50, include: { quote: { include: { client: { select: { name: true } } } } } })
+    prisma.invoice.findMany({ orderBy: { createdAt: "desc" }, take: 50, include: { quote: { include: { client: { select: { name: true } } } } } }),
+    prisma.document.findMany({ where: { expiryDate: { not: null } }, orderBy: { expiryDate: "asc" }, take: 50, include: { client: { select: { name: true } } } })
   ]);
 
   const counts = {
@@ -27,5 +28,5 @@ export async function GET() {
     followUps: await prisma.followUp.count(),
   };
 
-  return NextResponse.json({ counts, clients, leads, contacts, quoteReqs, services, followUps, quotesList, invoices });
+  return NextResponse.json({ counts, clients, leads, contacts, quoteReqs, services, followUps, quotesList, invoices, documents });
 }

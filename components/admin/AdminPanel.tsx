@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { signOut } from "next-auth/react";
 import {
-  BarChart3, CalendarDays, CheckSquare, ClipboardList, Download, FileArchive, FileBadge,
+  AlertTriangle, BarChart3, CalendarDays, CheckSquare, ClipboardList, Download, FileArchive, FileBadge,
   FileText, FolderOpen, LayoutDashboard, LogOut, MessageSquareText, Plus, ReceiptText,
   RefreshCcw, ShieldCheck, Sparkles, UserCog, UsersRound, Loader2, Wallet
 } from "lucide-react";
@@ -17,11 +18,19 @@ type Lead = { id: string; name: string; email?: string; phone?: string; serviceI
 type ServiceRow = { id: string; serviceType: string; status: string; priority: string; assignedTo?: string; deadline?: string; client: { name: string } };
 type FollowUp = { id: string; step: string; dueDate: string; client: { name: string } };
 type InvoiceRow = { id: string; amount: number; status: string; paidAt?: string; createdAt: string; quote: { client: { name: string } } };
+type DocumentRow = { id: string; name: string; type: string; expiryDate?: string; client: { name: string } };
+
+const pipelineColumns = [
+  { key: "new", label: "New" },
+  { key: "in_progress", label: "In Progress" },
+  { key: "review", label: "Review" },
+  { key: "completed", label: "Completed" }
+];
 
 const modules = [
   { name: "Dashboard", icon: LayoutDashboard, detail: "Revenue, active clients, pending tasks, quick actions" },
   { name: "Clients", icon: UsersRound, detail: "Search, filters, CRUD-ready client table, source, linked services count" },
-  { name: "Service Pipeline", icon: ClipboardList, detail: "Kanban: New, Assigned, In Progress, Under Review, Completed, Delivered" },
+  { name: "Service Pipeline", icon: ClipboardList, detail: "Drag-drop kanban: New, In Progress, Review, Completed" },
   { name: "Visa Tracker", icon: FileBadge, detail: "Visa status, expiry alerts at 60/30/14/7 days, bulk actions" },
   { name: "Company Formation", icon: CheckSquare, detail: "14-step checklist per client with progress bar" },
   { name: "License Calendar", icon: CalendarDays, detail: "Calendar and list view with renewal alerts and bulk renew" },
@@ -71,6 +80,14 @@ function pendingTaskCounts(data: any) {
   return { openServices, pendingInvoices, dueSoon, total: openServices + pendingInvoices + dueSoon };
 }
 
+function expiringDocuments(documents: DocumentRow[] = []) {
+  return documents
+    .filter((d) => d.expiryDate)
+    .map((d) => ({ ...d, daysLeft: Math.ceil((new Date(d.expiryDate as string).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) }))
+    .filter((d) => d.daysLeft <= 60)
+    .sort((a, b) => a.daysLeft - b.daysLeft);
+}
+
 export function AdminPanel({ role, stats: initialStats }: { role?: string; stats: Stats }) {
   const [active, setActive] = useState("Dashboard");
   const [data, setData] = useState<any>(null);
@@ -88,6 +105,13 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
   const activeModule = useMemo(() => modules.find(m => m.name === active) ?? modules[0], [active]);
   const revenue = useMemo(() => revenueTotals(data?.invoices), [data]);
   const pending = useMemo(() => pendingTaskCounts(data), [data]);
+  const alerts = useMemo(() => expiringDocuments(data?.documents), [data]);
+
+  const updateServiceStatus = async (id: string, status: string) => {
+    setData((prev: any) => prev ? { ...prev, services: prev.services.map((s: ServiceRow) => s.id === id ? { ...s, status } : s) } : prev);
+    const r = await fetch(`/api/admin/services/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
+    if (!r.ok) fetchData();
+  };
 
   const exportCSV = () => {
     if (!data?.clients) return;
@@ -202,6 +226,24 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
               {/* DASHBOARD */}
               {active==="Dashboard" && (
                 <div className="space-y-6">
+                  {alerts.length > 0 && (
+                    <div className="glass-panel rounded-lg p-5 shadow-soft">
+                      <h3 className="flex items-center gap-2 font-heading font-semibold text-heading"><AlertTriangle size={18} className="text-gold"/> Expiry Alerts</h3>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        {alerts.slice(0, 6).map((d) => (
+                          <div key={d.id} className="flex items-center justify-between rounded-md border border-edge bg-panel px-3 py-2 text-sm">
+                            <div>
+                              <p className="font-medium text-heading">{d.name}</p>
+                              <p className="text-xs text-muted">{d.client.name} &middot; {d.type}</p>
+                            </div>
+                            <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", d.daysLeft <= 7 ? "bg-red-500/15 text-red-300" : d.daysLeft <= 30 ? "bg-amber-500/15 text-amber-300" : "bg-gold/15 text-gold")}>
+                              {d.daysLeft < 0 ? "Expired" : `${d.daysLeft}d left`}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div className="grid gap-4 md:grid-cols-3">
                     {([["Today", revenue.today], ["This Month", revenue.month], ["Year to Date", revenue.ytd]] as [string, number][]).map(([label, value], i) => (
                       <motion.div
@@ -241,7 +283,7 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
                   <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
                     <div className="glass-panel rounded-lg p-6 shadow-soft">
                       <h3 className="font-heading font-semibold text-heading text-lg">Pipeline Overview</h3>
-                      <div className="mt-4 grid gap-3 md:grid-cols-3">{["New","In Progress","Completed"].map(s=>(
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-4">{["New","In Progress","Review","Completed"].map(s=>(
                         <div key={s} className="rounded-md border border-edge bg-panel p-3">
                           <p className="text-sm font-semibold text-heading">{s}</p>
                           <p className="text-xs text-muted mt-1">{data?.services?.filter((x:ServiceRow)=>x.status===s.toLowerCase().replace(" ","_")).length||0} items</p>
@@ -267,9 +309,46 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
               )}
 
               {/* TABLES */}
-              {active==="Clients" && data && <div className="glass-panel rounded-lg overflow-hidden shadow-soft"><table className="w-full text-sm"><thead className="bg-panel text-heading"><tr><th className="px-4 py-3 text-left">Name</th><th className="px-4 py-3 hidden sm:table-cell text-left">Email</th><th className="px-4 py-3 hidden sm:table-cell text-left">Phone</th><th className="px-4 py-3 hidden md:table-cell text-left">Company</th><th className="px-4 py-3 text-left">Type</th><th className="px-4 py-3 text-left">Source</th></tr></thead><tbody className="divide-y divide-edge">{data.clients?.map((c:Client)=><tr key={c.id}><td className="px-4 py-3 font-medium text-heading">{c.name}</td><td className="px-4 py-3 hidden sm:table-cell text-muted">{c.email||"-"}</td><td className="px-4 py-3 hidden sm:table-cell text-muted">{c.phone||"-"}</td><td className="px-4 py-3 hidden md:table-cell text-muted">{c.company||"-"}</td><td className="px-4 py-3 text-xs text-body">{c.businessType||"-"}</td><td className="px-4 py-3"><span className="bg-gold/10 text-gold text-xs px-2 py-0.5 rounded-full">{c.source||"-"}</span></td></tr>)}</tbody></table></div>}
+              {active==="Clients" && data && <div className="glass-panel rounded-lg overflow-hidden shadow-soft"><table className="w-full text-sm"><thead className="bg-panel text-heading"><tr><th className="px-4 py-3 text-left">Name</th><th className="px-4 py-3 hidden sm:table-cell text-left">Email</th><th className="px-4 py-3 hidden sm:table-cell text-left">Phone</th><th className="px-4 py-3 hidden md:table-cell text-left">Company</th><th className="px-4 py-3 text-left">Type</th><th className="px-4 py-3 text-left">Source</th></tr></thead><tbody className="divide-y divide-edge">{data.clients?.map((c:Client)=><tr key={c.id}><td className="px-4 py-3 font-medium text-heading"><Link href={`/admin/clients/${c.id}`} className="hover:text-gold hover:underline">{c.name}</Link></td><td className="px-4 py-3 hidden sm:table-cell text-muted">{c.email||"-"}</td><td className="px-4 py-3 hidden sm:table-cell text-muted">{c.phone||"-"}</td><td className="px-4 py-3 hidden md:table-cell text-muted">{c.company||"-"}</td><td className="px-4 py-3 text-xs text-body">{c.businessType||"-"}</td><td className="px-4 py-3"><span className="bg-gold/10 text-gold text-xs px-2 py-0.5 rounded-full">{c.source||"-"}</span></td></tr>)}</tbody></table></div>}
 
-              {active==="Service Pipeline" && data && <div className="glass-panel rounded-lg overflow-hidden shadow-soft"><table className="w-full text-sm"><thead className="bg-panel text-heading"><tr><th className="px-4 py-3 text-left">Client</th><th className="px-4 py-3 text-left">Service</th><th className="px-4 py-3 hidden sm:table-cell text-left">Assigned</th><th className="px-4 py-3 text-left">Status</th><th className="px-4 py-3 hidden md:table-cell text-left">Deadline</th></tr></thead><tbody className="divide-y divide-edge">{data.services?.map((s:ServiceRow)=><tr key={s.id}><td className="px-4 py-3 font-medium text-heading">{s.client.name}</td><td className="px-4 py-3 text-body">{s.serviceType}</td><td className="px-4 py-3 hidden sm:table-cell text-muted">{s.assignedTo||"-"}</td><td className="px-4 py-3"><span className={cn("text-xs px-2 py-0.5 rounded-full",s.status==="in_progress"?"bg-blue-500/15 text-blue-300":"bg-emerald-500/15 text-emerald-300")}>{s.status}</span></td><td className="px-4 py-3 hidden md:table-cell text-muted">{s.deadline?new Date(s.deadline).toLocaleDateString():"-"}</td></tr>)}</tbody></table></div>}
+              {active==="Service Pipeline" && data && (
+                <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+                  {pipelineColumns.map((col) => {
+                    const items = ((data.services ?? []) as ServiceRow[]).filter((s) => s.status === col.key);
+                    return (
+                      <div
+                        key={col.key}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => { e.preventDefault(); const id = e.dataTransfer.getData("text/plain"); if (id) updateServiceStatus(id, col.key); }}
+                        className="glass-panel min-h-[220px] rounded-lg p-3 shadow-soft"
+                      >
+                        <div className="flex items-center justify-between px-1 pb-2">
+                          <h3 className="font-heading text-sm font-semibold text-heading">{col.label}</h3>
+                          <span className="rounded-full bg-panel px-2 py-0.5 text-xs text-muted">{items.length}</span>
+                        </div>
+                        <div className="space-y-2">
+                          {items.map((s) => (
+                            <div
+                              key={s.id}
+                              draggable
+                              onDragStart={(e) => e.dataTransfer.setData("text/plain", s.id)}
+                              className="cursor-grab rounded-md border border-edge bg-panel p-3 text-sm active:cursor-grabbing"
+                            >
+                              <p className="font-semibold text-heading">{s.client.name}</p>
+                              <p className="mt-1 text-xs text-body">{s.serviceType}</p>
+                              <div className="mt-2 flex items-center justify-between text-xs text-muted">
+                                <span>{s.assignedTo || "Unassigned"}</span>
+                                {s.deadline ? <span>{new Date(s.deadline).toLocaleDateString()}</span> : null}
+                              </div>
+                            </div>
+                          ))}
+                          {items.length === 0 && <p className="px-1 py-8 text-center text-xs text-muted">Drop here</p>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {active==="Leads" && data && <div className="glass-panel rounded-lg overflow-hidden shadow-soft"><table className="w-full text-sm"><thead className="bg-panel text-heading"><tr><th className="px-4 py-3 text-left">Name</th><th className="px-4 py-3 hidden sm:table-cell text-left">Email</th><th className="px-4 py-3 hidden sm:table-cell text-left">Phone</th><th className="px-4 py-3 hidden md:table-cell text-left">Interest</th><th className="px-4 py-3 text-left">Status</th><th className="px-4 py-3 text-left">Source</th></tr></thead><tbody className="divide-y divide-edge">{data.leads?.map((l:Lead)=><tr key={l.id}><td className="px-4 py-3 font-medium text-heading">{l.name}</td><td className="px-4 py-3 hidden sm:table-cell text-muted">{l.email||"-"}</td><td className="px-4 py-3 hidden sm:table-cell text-muted">{l.phone||"-"}</td><td className="px-4 py-3 hidden md:table-cell text-muted">{l.serviceInterest||"-"}</td><td className="px-4 py-3 text-body">{l.status}</td><td className="px-4 py-3"><span className="bg-gold/10 text-gold text-xs px-2 py-0.5 rounded-full">{l.source}</span></td></tr>)}</tbody></table></div>}
 
