@@ -11,7 +11,7 @@ class AdminEventBus {
   }
 
   emit(event: AdminEvent) {
-    for (const listener of this.listeners) listener(event);
+    for (const listener of Array.from(this.listeners)) listener(event);
   }
 }
 
