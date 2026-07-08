@@ -1,35 +1,50 @@
 import Link from "next/link";
-import { ArrowRight, Star } from "lucide-react";
+import { ArrowRight, MessageCircle, Star } from "lucide-react";
 import { Button } from "@/components/Button";
 import { SectionHeading } from "@/components/SectionHeading";
-import { CardTilt, HeroMotion, ServiceIconPulse, StatsCounter, WaveBackground } from "@/components/motion/MotionScenes";
-import { company, serviceHighlights, testimonials, whyChooseUs } from "@/lib/company";
+import { HeroCanvas } from "@/components/HeroCanvas";
+import { AITeamShowcase, DashboardPreview, HowItWorksFlow, LeadershipTeam, WhyAiInvention } from "@/components/home/HomeSections";
+import { CardTilt, StatsCounter } from "@/components/motion/MotionScenes";
+import { aiStats, company, serviceHighlights, testimonials } from "@/lib/company";
 
 export default function HomePage() {
+  const whatsappHref = `https://wa.me/${company.whatsapp.replace(/\D/g, "")}`;
+
   return (
     <main>
-      <section className="bg-white">
-        <div className="section-shell grid items-center gap-8 py-8 sm:py-12 lg:min-h-[calc(100vh-140px)] lg:grid-cols-[1fr_0.9fr]">
-          <div>
-            <h1 className="text-3xl font-bold leading-tight text-navy sm:text-4xl md:text-6xl">
-              Your Trusted Partner for <span className="gold-gradient">PRO Services in UAE</span>
-            </h1>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-ink/70 sm:mt-6 sm:text-lg sm:leading-8">
-              Professional business setup, visa processing, and UAE government services support
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3 sm:mt-8">
-              <Button href="/quote">Get Free Consultation</Button>
-              <Button href="/services" variant="outline">Our Services</Button>
-            </div>
+      <section className="relative overflow-hidden bg-base">
+        <HeroCanvas />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-base/10 via-base/60 to-base" />
+        <div className="section-shell relative py-20 text-center sm:py-28 lg:py-36">
+          <p className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-gold/40 bg-glass px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-gold">
+            AI-Powered PRO Services — 2026
+          </p>
+          <h1 className="mx-auto max-w-4xl font-heading text-4xl font-bold leading-tight text-heading sm:text-5xl md:text-6xl">
+            Your Trusted Partner for <span className="gold-gradient">PRO Services in UAE</span>
+          </h1>
+          <p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-body sm:text-lg">
+            Professional business setup, visa processing, and UAE government services — accelerated by an 18-agent AI operations team and reviewed by our leadership at every step.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Button href="/quote">Get Free Consultation</Button>
+            <Button href="/services" variant="outline">Our Services</Button>
           </div>
-          <HeroMotion />
         </div>
-        <div className="section-shell -mt-4 grid gap-5 rounded-lg border border-navy/10 bg-white p-6 shadow-soft md:grid-cols-4">
-          {company.stats.map((stat) => <StatsCounter key={stat.label} {...stat} />)}
+        <div className="section-shell relative -mt-6 grid gap-5 rounded-lg border border-edge bg-glass p-6 shadow-soft backdrop-blur md:grid-cols-4">
+          {aiStats.map((stat) => <StatsCounter key={stat.label} {...stat} />)}
         </div>
       </section>
 
-      <section className="py-12 sm:py-20">
+      <section className="py-16 sm:py-24">
+        <div className="section-shell">
+          <SectionHeading eyebrow="Meet the Team" align="center" title="18 AI Agents, Purpose-Built for UAE PRO Work" copy="Every workflow — visas, licensing, compliance, attestation, finance — runs through a dedicated AI agent trained on UAE government processes, supervised by our leadership team." />
+          <div className="mt-10">
+            <AITeamShowcase />
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16 sm:py-24">
         <div className="section-shell">
           <SectionHeading title="Services Built Around UAE Business Reality" copy="From the first trade name reservation to renewal calendars and visa files, every workflow is designed for clarity, speed, and compliant follow-through." />
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -38,9 +53,9 @@ export default function HomePage() {
               return (
                 <CardTilt key={service.title}>
                   <Icon className="h-10 w-10 text-gold" />
-                  <h3 className="mt-5 text-xl font-semibold text-navy">{service.title}</h3>
-                  <p className="mt-3 min-h-20 text-sm leading-6 text-ink/65">{service.description}</p>
-                  <Link href={service.href} className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-navy">
+                  <h3 className="mt-5 font-heading text-xl font-semibold text-heading">{service.title}</h3>
+                  <p className="mt-3 min-h-20 text-sm leading-6 text-body">{service.description}</p>
+                  <Link href={service.href} className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-gold">
                     Learn More <ArrowRight size={16} />
                   </Link>
                 </CardTilt>
@@ -50,50 +65,68 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="bg-mist py-12 sm:py-20">
+      <section className="bg-panel py-16 sm:py-24">
         <div className="section-shell">
-          <SectionHeading align="center" title="Why Choose Us" />
-          <div className="mt-8 grid gap-5 sm:grid-cols-2 md:grid-cols-3">
-            {whyChooseUs.map((item) => {
-              const Icon = item.icon;
-              return (
-                <ServiceIconPulse key={item.title}>
-                  <div className="flex h-14 w-14 items-center justify-center rounded-md bg-gold/15 text-gold transition group-hover:scale-110">
-                    <Icon />
-                  </div>
-                  <h3 className="mt-5 text-xl font-semibold text-navy">{item.title}</h3>
-                  <p className="mt-3 text-sm leading-7 text-ink/65">Reliable guidance, document discipline, and timely communication for every file.</p>
-                </ServiceIconPulse>
-              );
-            })}
+          <SectionHeading align="center" title="How It Works" copy="A simple three-step flow from document upload to completed government approval." />
+          <div className="mt-10">
+            <HowItWorksFlow />
           </div>
         </div>
       </section>
 
-      <section className="py-12 sm:py-20">
+      <section className="py-16 sm:py-24">
+        <div className="section-shell">
+          <SectionHeading eyebrow="Client Portal" title="A Real-Time View of Every Case" copy="Preview of the admin dashboard the team uses to track clients, quotes, invoices, and renewals — the same visibility your case gets from day one." />
+          <div className="mt-10">
+            <DashboardPreview />
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-panel py-16 sm:py-24">
+        <div className="section-shell">
+          <SectionHeading eyebrow="Why AI Invention" align="center" title="Why Choose Us" copy="This isn't off-the-shelf automation — it's a proprietary AI operations layer only Professional Business Services can run." />
+          <div className="mt-10">
+            <WhyAiInvention />
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16 sm:py-24">
+        <div className="section-shell">
+          <SectionHeading eyebrow="Leadership" align="center" title="The Team Behind the Cases" copy="Human leadership directing an 18-agent AI operations team." />
+          <div className="mt-10">
+            <LeadershipTeam />
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16 sm:py-24">
         <div className="section-shell">
           <SectionHeading title="Client Feedback" copy="Placeholder testimonials showing the quote-style design requested for the launch build." />
           <div className="mt-8 grid gap-5 sm:grid-cols-2 md:grid-cols-3">
             {testimonials.map((testimonial) => (
-              <article key={testimonial.name} className="rounded-lg border border-navy/10 bg-white p-7 shadow-soft">
+              <article key={testimonial.name} className="glass-panel rounded-lg p-7 shadow-soft">
                 <div className="flex gap-1 text-gold">{Array.from({ length: 5 }).map((_, index) => <Star key={index} size={17} fill="currentColor" />)}</div>
-                <p className="mt-5 leading-7 text-ink/70">&ldquo;{testimonial.text}&rdquo;</p>
-                <h3 className="mt-6 font-semibold text-navy">{testimonial.name}</h3>
-                <p className="text-sm text-ink/55">{testimonial.company}</p>
+                <p className="mt-5 leading-7 text-body">&ldquo;{testimonial.text}&rdquo;</p>
+                <h3 className="mt-6 font-heading font-semibold text-heading">{testimonial.name}</h3>
+                <p className="text-sm text-muted">{testimonial.company}</p>
               </article>
             ))}
           </div>
         </div>
       </section>
 
-      <WaveBackground />
-      <section className="bg-mist py-12 sm:py-16">
+      <section className="bg-panel py-14 sm:py-20">
         <div className="section-shell flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
           <div>
-            <h2 className="text-2xl font-semibold text-navy sm:text-3xl">Ready to Start Your Business in UAE?</h2>
-            <p className="mt-3 text-ink/65">Send the request and the team will review the right service route.</p>
+            <h2 className="font-heading text-2xl font-semibold text-heading sm:text-3xl">Ready to Start Your Business in UAE?</h2>
+            <p className="mt-3 text-body">Send the request and the team will review the right service route.</p>
           </div>
-          <Button href="/quote">Get Free Quote</Button>
+          <div className="flex flex-wrap gap-3">
+            <Button href={whatsappHref} className="!bg-[#25D366] !text-white hover:!bg-[#1ebe59]"><MessageCircle size={18} /> WhatsApp Us</Button>
+            <Button href="/quote">Get Free Quote</Button>
+          </div>
         </div>
       </section>
     </main>
