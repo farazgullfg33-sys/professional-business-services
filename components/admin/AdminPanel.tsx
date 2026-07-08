@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/Button";
 import { cn } from "@/lib/utils";
+import { acquisitionFunnel, leadsBySource, monthlyRevenueSeries, staffProductivity, statusBreakdown } from "@/lib/reports";
+import { AcquisitionFunnelChart, LeadsBySourceChart, RevenueTrendChart, StaffProductivityChart, StatusBreakdownChart } from "@/components/admin/Charts";
 
 type Stats = { clients: number; leads: number; contacts: number; quoteReqs: number; services: number };
 type Client = { id: string; name: string; email?: string; phone?: string; company?: string; businessType?: string; status: string; source?: string };
@@ -106,6 +108,16 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
   const revenue = useMemo(() => revenueTotals(data?.invoices), [data]);
   const pending = useMemo(() => pendingTaskCounts(data), [data]);
   const alerts = useMemo(() => expiringDocuments(data?.documents), [data]);
+  const revenueSeries = useMemo(() => monthlyRevenueSeries(data?.invoices), [data]);
+  const pipelineBreakdown = useMemo(() => statusBreakdown(data?.services), [data]);
+  const funnel = useMemo(() => acquisitionFunnel({
+    leads: initialStats.leads,
+    quoteReqs: initialStats.quoteReqs,
+    clients: initialStats.clients,
+    completed: (data?.services ?? []).filter((s: ServiceRow) => ["completed", "delivered"].includes(s.status)).length
+  }), [data, initialStats]);
+  const sourceBreakdown = useMemo(() => leadsBySource(data?.leads), [data]);
+  const productivity = useMemo(() => staffProductivity(data?.services), [data]);
 
   const updateServiceStatus = async (id: string, status: string) => {
     setData((prev: any) => prev ? { ...prev, services: prev.services.map((s: ServiceRow) => s.id === id ? { ...s, status } : s) } : prev);
@@ -280,6 +292,24 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
                     </div>
                   </div>
 
+                  <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+                    <div className="glass-panel rounded-lg p-6 shadow-soft">
+                      <h3 className="font-heading font-semibold text-heading text-lg">Revenue Trend</h3>
+                      <div className="mt-2 -ml-2">
+                        <RevenueTrendChart data={revenueSeries} />
+                      </div>
+                    </div>
+                    <div className="glass-panel rounded-lg p-6 shadow-soft">
+                      <h3 className="font-heading font-semibold text-heading text-lg">Pipeline by Status</h3>
+                      {pipelineBreakdown.length > 0 ? <StatusBreakdownChart data={pipelineBreakdown} /> : <p className="mt-8 text-center text-sm text-muted">No service requests yet.</p>}
+                    </div>
+                  </div>
+
+                  <div className="glass-panel rounded-lg p-6 shadow-soft">
+                    <h3 className="font-heading font-semibold text-heading text-lg">Client Acquisition Funnel</h3>
+                    <AcquisitionFunnelChart data={funnel} />
+                  </div>
+
                   <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
                     <div className="glass-panel rounded-lg p-6 shadow-soft">
                       <h3 className="font-heading font-semibold text-heading text-lg">Pipeline Overview</h3>
@@ -362,7 +392,28 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
 
               {placeholders.includes(active) && <div className="glass-panel rounded-lg p-8 text-center shadow-soft"><p className="text-muted text-lg">Coming Soon</p><p className="text-muted/70 text-sm mt-2">Database schema ready. Next phase build.</p></div>}
 
-              {active==="Reports" && <div className="grid gap-5 md:grid-cols-3">{[["Total Clients",initialStats.clients],["Total Leads",initialStats.leads],["Contacts",initialStats.contacts],["Quote Requests",initialStats.quoteReqs],["Active Services",initialStats.services]].map(([l,v])=><div key={l} className="glass-panel rounded-lg p-5 shadow-soft"><p className="text-sm text-muted">{l}</p><p className="text-3xl font-heading font-bold text-heading">{v as number}</p></div>)}</div>}
+              {active==="Reports" && <div className="space-y-6">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="grid flex-1 gap-5 md:grid-cols-3">{[["Total Clients",initialStats.clients],["Total Leads",initialStats.leads],["Contacts",initialStats.contacts],["Quote Requests",initialStats.quoteReqs],["Active Services",initialStats.services]].map(([l,v])=><div key={l} className="glass-panel rounded-lg p-5 shadow-soft"><p className="text-sm text-muted">{l}</p><p className="text-3xl font-heading font-bold text-heading">{v as number}</p></div>)}</div>
+                  <a href="/api/admin/reports/pdf" target="_blank" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-gold px-5 py-3 text-sm font-semibold text-navy shadow-gold transition hover:bg-[#b7963f]"><Download size={16}/> Monthly Report (PDF)</a>
+                </div>
+
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <div className="glass-panel rounded-lg p-6 shadow-soft">
+                    <h3 className="font-heading font-semibold text-heading text-lg">Revenue Breakdown</h3>
+                    <div className="mt-2 -ml-2"><RevenueTrendChart data={revenueSeries} /></div>
+                  </div>
+                  <div className="glass-panel rounded-lg p-6 shadow-soft">
+                    <h3 className="font-heading font-semibold text-heading text-lg">Leads by Source</h3>
+                    {sourceBreakdown.length > 0 ? <LeadsBySourceChart data={sourceBreakdown} /> : <p className="mt-8 text-center text-sm text-muted">No leads yet.</p>}
+                  </div>
+                </div>
+
+                <div className="glass-panel rounded-lg p-6 shadow-soft">
+                  <h3 className="font-heading font-semibold text-heading text-lg">Staff Productivity</h3>
+                  {productivity.length > 0 ? <StaffProductivityChart data={productivity} /> : <p className="mt-8 text-center text-sm text-muted">No assignments yet.</p>}
+                </div>
+              </div>}
             </motion.div>
           </AnimatePresence>
         </section>
