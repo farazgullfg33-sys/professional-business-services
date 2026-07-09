@@ -293,7 +293,7 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
               {active==="Dashboard" && (
                 <div className="space-y-6">
                   {alerts.length > 0 && (
-                    <div className="glass-panel rounded-lg p-5 shadow-soft">
+                    <div className="glass-panel rounded-lg p-5 shadow-soft transition hover:border-gold/25">
                       <h3 className="flex items-center gap-2 font-heading font-semibold text-heading"><AlertTriangle size={18} className="text-gold"/> Expiry Alerts</h3>
                       <div className="mt-3 grid gap-2 sm:grid-cols-2">
                         {alerts.slice(0, 6).map((d) => (
@@ -314,7 +314,7 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
                     {([["Today", revenue.today], ["This Month", revenue.month], ["Year to Date", revenue.ytd]] as [string, number][]).map(([label, value], i) => (
                       <motion.div
                         key={label}
-                        className="glass-panel rounded-lg p-5 shadow-soft"
+                        className="glass-panel rounded-lg p-5 shadow-soft transition hover:border-gold/25"
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.05 }}
@@ -329,57 +329,66 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-3">
-                    <div className="glass-panel rounded-lg p-5 shadow-soft">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted">Active Clients</p>
-                      <p className="mt-2 font-heading text-3xl font-bold text-heading">{initialStats.clients}</p>
+                    <div className="glass-panel rounded-lg p-5 shadow-soft transition hover:border-gold/25">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted">Active Clients</p>
+                        <span className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-400/15 text-blue-300"><UsersRound size={16}/></span>
+                      </div>
+                      <p className="mt-3 font-heading text-3xl font-bold text-heading">{initialStats.clients}</p>
                       <p className="mt-1 text-xs text-gold">{initialStats.leads} leads in pipeline</p>
                     </div>
-                    <div className="glass-panel rounded-lg p-5 shadow-soft">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted">Pending Tasks</p>
-                      <p className="mt-2 font-heading text-3xl font-bold text-heading">{pending.total}</p>
+                    <div className="glass-panel rounded-lg p-5 shadow-soft transition hover:border-gold/25">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted">Pending Tasks</p>
+                        <span className="flex h-8 w-8 items-center justify-center rounded-md bg-amber-400/15 text-amber-300"><ClipboardList size={16}/></span>
+                      </div>
+                      <p className="mt-3 font-heading text-3xl font-bold text-heading">{pending.total}</p>
                       <p className="mt-1 text-xs text-muted">{pending.openServices} open &middot; {pending.pendingInvoices} unpaid &middot; {pending.dueSoon} due soon</p>
                     </div>
-                    <div className="glass-panel rounded-lg p-5 shadow-soft">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted">Quote Requests</p>
-                      <p className="mt-2 font-heading text-3xl font-bold text-heading">{initialStats.quoteReqs}</p>
+                    <div className="glass-panel rounded-lg p-5 shadow-soft transition hover:border-gold/25">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted">Quote Requests</p>
+                        <span className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-400/15 text-emerald-300"><FileText size={16}/></span>
+                      </div>
+                      <p className="mt-3 font-heading text-3xl font-bold text-heading">{initialStats.quoteReqs}</p>
                       <p className="mt-1 text-xs text-muted">{initialStats.contacts} contact messages</p>
                     </div>
                   </div>
 
                   <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-                    <div className="glass-panel rounded-lg p-6 shadow-soft">
+                    <div className="glass-panel rounded-lg p-6 shadow-soft transition hover:border-gold/25">
                       <h3 className="font-heading font-semibold text-heading text-lg">Revenue Trend</h3>
                       <div className="mt-2 -ml-2">
                         <RevenueTrendChart data={revenueSeries} />
                       </div>
                     </div>
-                    <div className="glass-panel rounded-lg p-6 shadow-soft">
+                    <div className="glass-panel rounded-lg p-6 shadow-soft transition hover:border-gold/25">
                       <h3 className="font-heading font-semibold text-heading text-lg">Pipeline by Status</h3>
                       {pipelineBreakdown.length > 0 ? <StatusBreakdownChart data={pipelineBreakdown} /> : <p className="mt-8 text-center text-sm text-muted">No service requests yet.</p>}
                     </div>
                   </div>
 
-                  <div className="glass-panel rounded-lg p-6 shadow-soft">
+                  <div className="glass-panel rounded-lg p-6 shadow-soft transition hover:border-gold/25">
                     <h3 className="font-heading font-semibold text-heading text-lg">Client Acquisition Funnel</h3>
                     <AcquisitionFunnelChart data={funnel} />
                   </div>
 
                   <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
-                    <div className="glass-panel rounded-lg p-6 shadow-soft">
+                    <div className="glass-panel rounded-lg p-6 shadow-soft transition hover:border-gold/25">
                       <h3 className="font-heading font-semibold text-heading text-lg">Pipeline Overview</h3>
-                      <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-4">{["New","In Progress","Review","Completed"].map(s=>(
-                        <div key={s} className="rounded-md border border-edge bg-panel p-3">
-                          <p className="text-sm font-semibold text-heading">{s}</p>
-                          <p className="text-xs text-muted mt-1">{data?.services?.filter((x:ServiceRow)=>x.status===s.toLowerCase().replace(" ","_")).length||0} items</p>
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-4">{pipelineColumns.map(col=>(
+                        <div key={col.key} className="rounded-md border border-edge bg-panel p-3 transition hover:border-gold/25">
+                          <p className="flex items-center gap-2 text-sm font-semibold text-heading"><span className={cn("h-2 w-2 rounded-full", col.dot)} />{col.label}</p>
+                          <p className="text-xs text-muted mt-1">{data?.services?.filter((x:ServiceRow)=>x.status===col.key).length||0} items</p>
                         </div>
                       ))}</div>
                     </div>
                     <aside className="space-y-4">
-                      <div className="glass-panel rounded-lg p-5 shadow-soft">
+                      <div className="glass-panel rounded-lg p-5 shadow-soft transition hover:border-gold/25">
                         <h3 className="font-heading font-semibold text-heading">Quick Links</h3>
                         <div className="mt-3 grid grid-cols-2 gap-1.5">{links.map((l,i)=><a key={l} href={urls[i]} target="_blank" rel="noreferrer" className="rounded border border-edge px-2 py-1.5 text-xs font-medium text-body hover:border-gold hover:text-gold">{l}</a>)}</div>
                       </div>
-                      <div className="glass-panel rounded-lg p-5 shadow-soft">
+                      <div className="glass-panel rounded-lg p-5 shadow-soft transition hover:border-gold/25">
                         <h3 className="font-heading font-semibold text-heading">Quick Actions</h3>
                         <div className="mt-3 grid gap-2">
                           <Button onClick={()=>{setShowNewClient(true)}}>New Client</Button>
@@ -462,22 +471,22 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
 
               {active==="Reports" && <div className="space-y-6">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="grid flex-1 gap-5 md:grid-cols-3">{[["Total Clients",initialStats.clients],["Total Leads",initialStats.leads],["Contacts",initialStats.contacts],["Quote Requests",initialStats.quoteReqs],["Active Services",initialStats.services]].map(([l,v])=><div key={l} className="glass-panel rounded-lg p-5 shadow-soft"><p className="text-sm text-muted">{l}</p><p className="text-3xl font-heading font-bold text-heading">{v as number}</p></div>)}</div>
+                  <div className="grid flex-1 gap-5 md:grid-cols-3">{[["Total Clients",initialStats.clients],["Total Leads",initialStats.leads],["Contacts",initialStats.contacts],["Quote Requests",initialStats.quoteReqs],["Active Services",initialStats.services]].map(([l,v])=><div key={l} className="glass-panel rounded-lg p-5 shadow-soft transition hover:border-gold/25"><p className="text-sm text-muted">{l}</p><p className="text-3xl font-heading font-bold text-heading">{v as number}</p></div>)}</div>
                   <a href="/api/admin/reports/pdf" target="_blank" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-gold px-5 py-3 text-sm font-semibold text-navy shadow-gold transition hover:bg-[#b7963f]"><Download size={16}/> Monthly Report (PDF)</a>
                 </div>
 
                 <div className="grid gap-6 lg:grid-cols-2">
-                  <div className="glass-panel rounded-lg p-6 shadow-soft">
+                  <div className="glass-panel rounded-lg p-6 shadow-soft transition hover:border-gold/25">
                     <h3 className="font-heading font-semibold text-heading text-lg">Revenue Breakdown</h3>
                     <div className="mt-2 -ml-2"><RevenueTrendChart data={revenueSeries} /></div>
                   </div>
-                  <div className="glass-panel rounded-lg p-6 shadow-soft">
+                  <div className="glass-panel rounded-lg p-6 shadow-soft transition hover:border-gold/25">
                     <h3 className="font-heading font-semibold text-heading text-lg">Leads by Source</h3>
                     {sourceBreakdown.length > 0 ? <LeadsBySourceChart data={sourceBreakdown} /> : <p className="mt-8 text-center text-sm text-muted">No leads yet.</p>}
                   </div>
                 </div>
 
-                <div className="glass-panel rounded-lg p-6 shadow-soft">
+                <div className="glass-panel rounded-lg p-6 shadow-soft transition hover:border-gold/25">
                   <h3 className="font-heading font-semibold text-heading text-lg">Staff Productivity</h3>
                   {productivity.length > 0 ? <StaffProductivityChart data={productivity} /> : <p className="mt-8 text-center text-sm text-muted">No assignments yet.</p>}
                 </div>
