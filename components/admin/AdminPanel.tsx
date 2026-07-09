@@ -356,25 +356,25 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
                   </div>
 
                   <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-                    <div className="glass-panel rounded-lg p-6 shadow-soft transition hover:border-gold/25">
+                    <div className="glass-panel rounded-lg p-5 shadow-soft transition hover:border-gold/25 sm:p-6">
                       <h3 className="font-heading font-semibold text-heading text-lg">Revenue Trend</h3>
                       <div className="mt-2 -ml-2">
                         <RevenueTrendChart data={revenueSeries} />
                       </div>
                     </div>
-                    <div className="glass-panel rounded-lg p-6 shadow-soft transition hover:border-gold/25">
+                    <div className="glass-panel rounded-lg p-5 shadow-soft transition hover:border-gold/25 sm:p-6">
                       <h3 className="font-heading font-semibold text-heading text-lg">Pipeline by Status</h3>
                       {pipelineBreakdown.length > 0 ? <StatusBreakdownChart data={pipelineBreakdown} /> : <p className="mt-8 text-center text-sm text-muted">No service requests yet.</p>}
                     </div>
                   </div>
 
-                  <div className="glass-panel rounded-lg p-6 shadow-soft transition hover:border-gold/25">
+                  <div className="glass-panel rounded-lg p-5 shadow-soft transition hover:border-gold/25 sm:p-6">
                     <h3 className="font-heading font-semibold text-heading text-lg">Client Acquisition Funnel</h3>
                     <AcquisitionFunnelChart data={funnel} />
                   </div>
 
                   <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
-                    <div className="glass-panel rounded-lg p-6 shadow-soft transition hover:border-gold/25">
+                    <div className="glass-panel rounded-lg p-5 shadow-soft transition hover:border-gold/25 sm:p-6">
                       <h3 className="font-heading font-semibold text-heading text-lg">Pipeline Overview</h3>
                       <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-4">{pipelineColumns.map(col=>(
                         <div key={col.key} className="rounded-md border border-edge bg-panel p-3 transition hover:border-gold/25">
@@ -476,17 +476,17 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
                 </div>
 
                 <div className="grid gap-6 lg:grid-cols-2">
-                  <div className="glass-panel rounded-lg p-6 shadow-soft transition hover:border-gold/25">
+                  <div className="glass-panel rounded-lg p-5 shadow-soft transition hover:border-gold/25 sm:p-6">
                     <h3 className="font-heading font-semibold text-heading text-lg">Revenue Breakdown</h3>
                     <div className="mt-2 -ml-2"><RevenueTrendChart data={revenueSeries} /></div>
                   </div>
-                  <div className="glass-panel rounded-lg p-6 shadow-soft transition hover:border-gold/25">
+                  <div className="glass-panel rounded-lg p-5 shadow-soft transition hover:border-gold/25 sm:p-6">
                     <h3 className="font-heading font-semibold text-heading text-lg">Leads by Source</h3>
                     {sourceBreakdown.length > 0 ? <LeadsBySourceChart data={sourceBreakdown} /> : <p className="mt-8 text-center text-sm text-muted">No leads yet.</p>}
                   </div>
                 </div>
 
-                <div className="glass-panel rounded-lg p-6 shadow-soft transition hover:border-gold/25">
+                <div className="glass-panel rounded-lg p-5 shadow-soft transition hover:border-gold/25 sm:p-6">
                   <h3 className="font-heading font-semibold text-heading text-lg">Staff Productivity</h3>
                   {productivity.length > 0 ? <StaffProductivityChart data={productivity} /> : <p className="mt-8 text-center text-sm text-muted">No assignments yet.</p>}
                 </div>
