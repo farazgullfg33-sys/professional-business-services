@@ -1,39 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Bot, CheckCircle2, Cpu, LayoutDashboard, Lock, ShieldCheck, Sparkles, UploadCloud, Users2 } from "lucide-react";
-import { aiTeam, dashboardModules, howItWorks, leadershipTeam, whyAiInvention } from "@/lib/company";
+import { CheckCircle2, ClipboardCheck, FileText, LayoutDashboard, Users2, UploadCloud } from "lucide-react";
+import { dashboardModules, howItWorks, leadershipTeam, whyChooseUsReasons } from "@/lib/company";
 
-export function AITeamShowcase() {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {aiTeam.map((agent, index) => (
-        <motion.div
-          key={agent.name}
-          className="glass-panel rounded-lg p-5 shadow-soft"
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-40px" }}
-          transition={{ delay: (index % 4) * 0.06 }}
-          whileHover={{ y: -4 }}
-        >
-          <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-gold/15 text-gold">
-              <Bot size={22} />
-            </span>
-            <div>
-              <h3 className="font-heading text-base font-semibold text-heading">{agent.name}</h3>
-              <p className="text-xs font-semibold uppercase tracking-wide text-gold">{agent.badge}</p>
-            </div>
-          </div>
-          <p className="mt-4 text-sm leading-6 text-body">{agent.expertise}</p>
-        </motion.div>
-      ))}
-    </div>
-  );
-}
-
-const stepIcons = [UploadCloud, Cpu, CheckCircle2];
+const stepIcons = [UploadCloud, ClipboardCheck, CheckCircle2];
+const whyIcons = [FileText, Users2, CheckCircle2];
 
 export function HowItWorksFlow() {
   return (
@@ -75,7 +47,7 @@ export function DashboardPreview() {
         <span className="h-3 w-3 rounded-full bg-red-400/70" />
         <span className="h-3 w-3 rounded-full bg-yellow-400/70" />
         <span className="h-3 w-3 rounded-full bg-green-400/70" />
-        <span className="ml-3 flex items-center gap-2 text-xs font-semibold text-muted"><LayoutDashboard size={14} /> client-portal — preview</span>
+        <span className="ml-3 flex items-center gap-2 text-xs font-semibold text-muted"><LayoutDashboard size={14} /> client-portal</span>
       </div>
       <div className="grid gap-4 p-6 sm:grid-cols-2 lg:grid-cols-4">
         {dashboardModules.map((module) => (
@@ -98,23 +70,21 @@ export function DashboardPreview() {
   );
 }
 
-const whyIcons = [Sparkles, Cpu, ShieldCheck, Lock];
-
-export function WhyAiInvention() {
+export function WhyChooseUs() {
   return (
-    <div className="grid gap-5 sm:grid-cols-2">
-      {whyAiInvention.map((item, index) => {
-        const Icon = whyIcons[index];
+    <div className="grid gap-5 sm:grid-cols-3">
+      {whyChooseUsReasons.map((item, index) => {
+        const Icon = whyIcons[index % whyIcons.length];
         return (
           <motion.div
             key={item.title}
-            className="glass-panel rounded-lg p-7 shadow-soft"
+            className="glass-panel rounded-lg p-7 text-center shadow-soft"
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: index * 0.08 }}
           >
-            <span className="flex h-12 w-12 items-center justify-center rounded-md bg-gold/15 text-gold"><Icon size={22} /></span>
+            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gold/15 text-gold"><Icon size={22} /></span>
             <h3 className="mt-4 font-heading text-lg font-semibold text-heading">{item.title}</h3>
             <p className="mt-2 text-sm leading-6 text-body">{item.description}</p>
           </motion.div>
@@ -140,8 +110,8 @@ export function LeadershipTeam() {
         <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gold/15 text-gold">
           <Users2 size={32} />
         </div>
-        <h3 className="mt-4 font-heading text-lg font-semibold text-heading">+18 AI Agents</h3>
-        <p className="text-sm text-body">Working around the clock alongside the leadership team.</p>
+        <h3 className="mt-4 font-heading text-lg font-semibold text-heading">12 Professional Staff</h3>
+        <p className="text-sm text-body">Experienced PRO officers handling 50+ active files every month.</p>
       </div>
     </div>
   );

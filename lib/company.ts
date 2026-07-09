@@ -212,50 +212,29 @@ export const faqs = [
 
 export const serviceOptions = serviceSections.flatMap((section) => section.items);
 
-export const aiStats = [
-  { value: 18, suffix: "", label: "AI Agents" },
-  { value: 2000, suffix: "+", label: "Cases Handled" },
-  { value: 24, suffix: "/7", label: "Support" },
+export const teamStats = [
+  { value: 12, suffix: "", label: "Professional Staff" },
+  { value: 5000, suffix: "+", label: "Visa Transactions" },
+  { value: 100, suffix: "+", label: "Company Formations" },
   { value: 15, suffix: "+", label: "Years Combined XP" }
 ];
 
-export const aiTeam = [
-  { name: "VisaBot Pro", badge: "Visa Processing", expertise: "Partner, company, family, visit, and residence visa applications and renewals." },
-  { name: "CompanyFormer AI", badge: "Business Setup", expertise: "Mainland, freezone, and branch company formation from trade name to license." },
-  { name: "LicenseGuard AI", badge: "Licensing", expertise: "Trade license issuance, renewal, amendment, and cancellation tracking." },
-  { name: "ComplianceCheck AI", badge: "Compliance", expertise: "Regulatory compliance monitoring against the latest UAE authority rules." },
-  { name: "DocuAttest AI", badge: "Attestation", expertise: "Certificate chains, embassy coordination, and MOFA document attestation." },
-  { name: "ImmigrationPro AI", badge: "Immigration", expertise: "UAE immigration approvals, bank guarantees, and status changes." },
-  { name: "LabourBot AI", badge: "MOHRE", expertise: "Ministry of Human Resources & Emiratisation portal filings." },
-  { name: "TammMaster AI", badge: "TAMM", expertise: "Abu Dhabi TAMM government services and portal transactions." },
-  { name: "GovtLiaison AI", badge: "Liaison", expertise: "Direct coordination with UAE government departments and typing centers." },
-  { name: "FinanceGuard AI", badge: "Finance", expertise: "Quote generation, invoicing, payment tracking, and financial reporting." },
-  { name: "IntakeBot AI", badge: "Intake", expertise: "New client onboarding and initial case qualification." },
-  { name: "SupportDesk AI", badge: "Support", expertise: "Ongoing client support helpline for status checks and questions." },
-  { name: "TrackFlow AI", badge: "Tracking", expertise: "Case tracking and renewal calendars across every active file." },
-  { name: "LeadGen AI", badge: "Growth", expertise: "Client acquisition, outreach, and lead qualification." },
-  { name: "ContentSEO AI", badge: "Content", expertise: "SEO content and search visibility for PRO service topics." },
-  { name: "SocialPilot AI", badge: "Social", expertise: "Social media management and client-facing communication." },
-  { name: "HRFlow AI", badge: "HR & Payroll", expertise: "HR administration and payroll coordination for client staff files." },
-  { name: "OpsCommander AI", badge: "Operations", expertise: "Overall operations workflow and cross-agent task routing." }
-];
+
 
 export const howItWorks = [
   { step: "01", title: "Upload Docs", description: "Share your documents and case details securely through the client portal or WhatsApp." },
-  { step: "02", title: "AI Processes", description: "The AI team reviews requirements, prepares the application, and flags anything missing." },
+  { step: "02", title: "We Process", description: "Our PRO team reviews requirements, prepares the application, and flags anything missing." },
   { step: "03", title: "Get Results", description: "Track status in real time and receive completed approvals, licenses, or visas." }
 ];
 
-export const whyAiInvention = [
-  { title: "Built & Operated In-House", description: "The AI operations layer was built specifically for this office — it isn't a rented chatbot bolted onto a website." },
-  { title: "18 Specialized Agents, One Team", description: "Every PRO workflow has a dedicated AI agent trained on UAE government processes, not a single generic assistant." },
-  { title: "Human Oversight, Always", description: "Leadership reviews every case before it's submitted to any authority — AI accelerates, people approve." },
-  { title: "Only We Can Operate This", description: "The playbook, integrations, and agent training are proprietary to Professional Business Services." }
+export const whyChooseUsReasons = [
+  { title: "Deep UAE Expertise", description: "Our PRO officers understand UAE government processes and regulations inside out — from ICP to MOHRE to GDRFA." },
+  { title: "Physical Presence", description: "With a real office in Abu Dhabi and PRO officers on the ground, your files move faster through government counters." },
+  { title: "End-to-End Service", description: "From trade name reservation to license renewal and visa stamping — one team handles your entire file." }
 ];
 
 export const leadershipTeam = [
-  { name: "Waqas Bhai", role: "CEO" },
-  { name: "Muhammad Faraz Gull", role: "General Manager" }
+  { name: "Muhammad Waqas", role: "CEO" }
 ];
 
 export const dashboardModules = [
