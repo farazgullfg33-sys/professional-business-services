@@ -29,26 +29,18 @@ export default function HomePage() {
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-base/10 via-base/60 to-base" />
         <div className="section-shell relative py-20 text-center sm:py-28 lg:py-36">
           <p className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-gold/40 bg-glass px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-gold">
-            AI-Powered PRO Services — 2026
+            Trusted PRO Services — 2026
           </p>
           <h1 className="mx-auto max-w-4xl font-heading text-4xl font-bold leading-tight text-heading sm:text-5xl md:text-6xl">
             Your Trusted Partner for <span className="gold-gradient">PRO Services in UAE</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-body sm:text-lg">
-            Professional business setup, visa processing, and UAE government services — accelerated by an 18-agent AI operations team and reviewed by our leadership at every step.
+            Professional business setup, visa processing, and UAE government services — reviewed by our leadership at every step.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Button href="/quote">Get Free Consultation</Button>
             <Button href="/services" variant="outline">Our Services</Button>
           </div>
-          <a
-            href="https://aiinvention.tech"
-            target="_blank"
-            rel="noreferrer"
-            className="mx-auto mt-6 inline-flex items-center gap-2 rounded-full border border-gold/40 bg-glass px-4 py-1.5 text-xs font-semibold text-gold transition hover:border-gold"
-          >
-            Technology Partner: AI Invention
-          </a>
         </div>
         <div className="section-shell relative -mt-6 grid gap-5 rounded-lg border border-edge bg-glass p-6 shadow-soft backdrop-blur md:grid-cols-4">
           {aiStats.map((stat) => <StatsCounter key={stat.label} {...stat} />)}
@@ -105,7 +97,7 @@ export default function HomePage() {
 
       <section className="bg-panel py-16 sm:py-24">
         <div className="section-shell">
-          <SectionHeading eyebrow="Why AI Invention" align="center" title="Why Choose Us" copy="This isn't off-the-shelf automation — it's a proprietary AI operations layer only Professional Business Services can run." />
+          <SectionHeading align="center" title="Why Choose Us" copy="This isn't off-the-shelf automation — it's a proprietary AI operations layer only Professional Business Services can run." />
           <div className="mt-10">
             <WhyAiInvention />
           </div>

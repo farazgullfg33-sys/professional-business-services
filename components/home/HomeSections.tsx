@@ -75,7 +75,7 @@ export function DashboardPreview() {
         <span className="h-3 w-3 rounded-full bg-red-400/70" />
         <span className="h-3 w-3 rounded-full bg-yellow-400/70" />
         <span className="h-3 w-3 rounded-full bg-green-400/70" />
-        <span className="ml-3 flex items-center gap-2 text-xs font-semibold text-muted"><LayoutDashboard size={14} /> admin-pro.aiinvention.tech — preview</span>
+        <span className="ml-3 flex items-center gap-2 text-xs font-semibold text-muted"><LayoutDashboard size={14} /> client-portal — preview</span>
       </div>
       <div className="grid gap-4 p-6 sm:grid-cols-2 lg:grid-cols-4">
         {dashboardModules.map((module) => (

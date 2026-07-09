@@ -29,7 +29,7 @@ export function ServiceIconPulse({ children }: { children: ReactNode }) {
 }
 
 export function TimelineMotion() {
-  const milestones = ["Established service desk", "Expanded visa operations", "100K+ visa transactions", "Full AI-powered admin pipeline"];
+  const milestones = ["Established service desk", "Expanded visa operations", "100K+ visa transactions", "Full digital admin pipeline"];
   return (
     <div className="relative pl-8">
       <div className="absolute left-3 top-0 h-full w-px bg-gold/50" />

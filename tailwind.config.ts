@@ -9,9 +9,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        navy: "#0a1628",
-        gold: "#c9a84c",
-        ink: "#1a1a2e",
+        navy: {
+          DEFAULT: "#0a1628",
+          light: "#152238",
+          dark: "#060f1c"
+        },
+        gold: {
+          DEFAULT: "#c9a84c",
+          light: "#d4b96a",
+          dark: "#a88935"
+        },
+        ink: "#334155",
         mist: "#f8fafc",
         base: "var(--bg-base)",
         surface: "var(--bg-surface)",
@@ -23,11 +31,12 @@ const config: Config = {
         glass: "var(--glass-bg)"
       },
       fontFamily: {
-        sans: ["var(--font-plus-jakarta)", "Plus Jakarta Sans", "sans-serif"],
-        heading: ["var(--font-inter)", "Inter", "sans-serif"]
+        sans: ["var(--font-inter)", "Inter", "system-ui", "sans-serif"],
+        heading: ["var(--font-playfair)", "Playfair Display", "Georgia", "serif"]
       },
       boxShadow: {
-        soft: "var(--shadow-soft)",
+        soft: "0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)",
+        card: "0 4px 6px rgba(0,0,0,0.04), 0 2px 4px rgba(0,0,0,0.04)",
         gold: "0 18px 40px rgba(201, 168, 76, 0.25)"
       }
     }

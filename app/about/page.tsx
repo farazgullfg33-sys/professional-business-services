@@ -4,7 +4,7 @@ import { aboutParagraphs, company } from "@/lib/company";
 
 export const metadata = {
   title: "About Us",
-  description: "Learn about Professional Business Services — an AI-powered PRO services team in Abu Dhabi handling company formation, visa processing, and UAE government liaison work."
+  description: "Learn about Professional Business Services — a PRO services team in Abu Dhabi handling company formation, visa processing, and UAE government liaison work."
 };
 
 export default function AboutPage() {

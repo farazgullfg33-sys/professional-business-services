@@ -33,16 +33,16 @@ export function TopBar() {
 export function Navbar() {
   const [open, setOpen] = useState(false);
   return (
-    <header className="glass-panel sticky top-0 z-40">
+    <header className="sticky top-0 z-40 border-b border-white/10 bg-navy shadow-soft">
       <div className="section-shell flex min-h-20 items-center justify-between gap-5">
-        <Link href="/" className="flex max-w-[200px] items-center gap-2 text-base font-heading font-bold leading-tight text-heading sm:max-w-none sm:gap-3 sm:text-lg">
+        <Link href="/" className="flex max-w-[200px] items-center gap-2 text-base font-heading font-bold leading-tight text-white sm:max-w-none sm:gap-3 sm:text-lg">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-gold/50 bg-white shadow-sm sm:h-12 sm:w-12">
             <Image src="/favicon.ico" alt="Logo" width={30} height={30} className="sm:h-[34px] sm:w-[34px]" />
           </span>
           <span className="sm:hidden">PRO Services</span>
           <span className="hidden sm:inline">Professional Business Services</span>
         </Link>
-        <nav className="hidden items-center gap-6 text-sm font-medium text-body lg:flex">
+        <nav className="hidden items-center gap-6 text-sm font-medium text-white/80 lg:flex">
           {nav.map(([label, href]) => (
             <Link key={href} href={href} className="transition hover:text-gold">
               {label}
@@ -55,16 +55,16 @@ export function Navbar() {
         </div>
         <div className="flex items-center gap-2 lg:hidden">
           <ThemeToggle />
-          <button className="focus-ring rounded-md p-2 text-heading" onClick={() => setOpen((value) => !value)} aria-label="Toggle navigation">
+          <button className="focus-ring rounded-md p-2 text-white" onClick={() => setOpen((value) => !value)} aria-label="Toggle navigation">
             {open ? <X /> : <Menu />}
           </button>
         </div>
       </div>
       {open ? (
-        <div className="border-t border-edge bg-surface px-5 py-4 lg:hidden">
+        <div className="border-t border-white/10 bg-navy-dark px-5 py-4 lg:hidden">
           <div className="flex flex-col gap-3">
             {nav.map(([label, href]) => (
-              <Link key={href} href={href} className="rounded-md px-3 py-2 text-sm font-semibold text-heading hover:bg-panel" onClick={() => setOpen(false)}>
+              <Link key={href} href={href} className="rounded-md px-3 py-2 text-sm font-semibold text-white hover:bg-white/10" onClick={() => setOpen(false)}>
                 {label}
               </Link>
             ))}
@@ -107,13 +107,6 @@ export function Footer() {
       </div>
       <div className="border-t border-white/10 py-5 text-center text-sm text-white/70">
         <p>{company.copyright}</p>
-        <p className="mt-1">
-          Powered by{" "}
-          <a href="https://aiinvention.tech" target="_blank" rel="noreferrer" className="font-semibold text-gold hover:underline">
-            AI Invention
-          </a>{" "}
-          — UAE First AI-Powered PRO Office Platform
-        </p>
       </div>
     </footer>
   );

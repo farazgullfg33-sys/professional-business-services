@@ -5,7 +5,7 @@ import { serviceSections } from "@/lib/company";
 
 export const metadata = {
   title: "Services",
-  description: "Business setup, visa processing, PRO outsourcing, document attestation, and compliance services across Abu Dhabi and the UAE, backed by an 18-agent AI operations team."
+  description: "Business setup, visa processing, PRO outsourcing, document attestation, and compliance services across Abu Dhabi and the UAE."
 };
 
 export default function ServicesPage() {
