@@ -21,7 +21,7 @@ export function ClientDetail({ client }: { client: any }) {
           <ArrowLeft size={16} /> Back to Admin
         </Link>
 
-        <div className="glass-panel rounded-lg p-6 shadow-soft">
+        <div className="glass-panel rounded-lg p-5 shadow-soft sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h1 className="font-heading text-2xl font-bold text-heading">{client.name}</h1>
@@ -37,12 +37,12 @@ export function ClientDetail({ client }: { client: any }) {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <section className="glass-panel rounded-lg p-6 shadow-soft">
+          <section className="glass-panel rounded-lg p-5 shadow-soft transition hover:border-gold/25 sm:p-6">
             <h2 className="font-heading text-lg font-semibold text-heading">Services</h2>
             <div className="mt-4 space-y-2">
               {client.services.length === 0 && <p className="text-sm text-muted">No service requests yet.</p>}
               {client.services.map((s: any) => (
-                <div key={s.id} className="flex items-center justify-between rounded-md border border-edge bg-panel px-3 py-2 text-sm">
+                <div key={s.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-edge bg-panel px-3 py-2.5 text-sm transition hover:border-gold/20">
                   <div>
                     <p className="font-medium text-heading">{s.serviceType}</p>
                     <p className="text-xs text-muted">{s.assignedTo || "Unassigned"} &middot; {s.deadline ? new Date(s.deadline).toLocaleDateString() : "No deadline"}</p>
@@ -53,12 +53,12 @@ export function ClientDetail({ client }: { client: any }) {
             </div>
           </section>
 
-          <section className="glass-panel rounded-lg p-6 shadow-soft">
+          <section className="glass-panel rounded-lg p-5 shadow-soft transition hover:border-gold/25 sm:p-6">
             <h2 className="font-heading text-lg font-semibold text-heading">Documents & Expiry</h2>
             <div className="mt-4 space-y-2">
               {client.documents.length === 0 && <p className="text-sm text-muted">No documents on file.</p>}
               {client.documents.map((d: any) => (
-                <div key={d.id} className="flex items-center justify-between rounded-md border border-edge bg-panel px-3 py-2 text-sm">
+                <div key={d.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-edge bg-panel px-3 py-2.5 text-sm transition hover:border-gold/20">
                   <div>
                     <p className="font-medium text-heading">{d.name}</p>
                     <p className="text-xs text-muted">{d.type}</p>
@@ -69,12 +69,12 @@ export function ClientDetail({ client }: { client: any }) {
             </div>
           </section>
 
-          <section className="glass-panel rounded-lg p-6 shadow-soft">
+          <section className="glass-panel rounded-lg p-5 shadow-soft transition hover:border-gold/25 sm:p-6">
             <h2 className="font-heading text-lg font-semibold text-heading">Follow-ups</h2>
             <div className="mt-4 space-y-2">
               {client.followUps.length === 0 && <p className="text-sm text-muted">No follow-ups scheduled.</p>}
               {client.followUps.map((f: any) => (
-                <div key={f.id} className="rounded-md border border-edge bg-panel px-3 py-2 text-sm">
+                <div key={f.id} className="rounded-md border border-edge bg-panel px-3 py-2.5 text-sm transition hover:border-gold/20">
                   <p className="font-medium text-heading">{f.step}</p>
                   <p className="text-xs text-muted">Due {new Date(f.dueDate).toLocaleDateString()} {f.completed ? "· Completed" : ""}</p>
                 </div>
@@ -82,12 +82,12 @@ export function ClientDetail({ client }: { client: any }) {
             </div>
           </section>
 
-          <section className="glass-panel rounded-lg p-6 shadow-soft">
+          <section className="glass-panel rounded-lg p-5 shadow-soft transition hover:border-gold/25 sm:p-6">
             <h2 className="font-heading text-lg font-semibold text-heading">Communication Log</h2>
             <div className="mt-4 space-y-2">
               {client.communications.length === 0 && <p className="text-sm text-muted">No communication logged.</p>}
               {client.communications.map((c: any) => (
-                <div key={c.id} className="rounded-md border border-edge bg-panel px-3 py-2 text-sm">
+                <div key={c.id} className="rounded-md border border-edge bg-panel px-3 py-2.5 text-sm transition hover:border-gold/20">
                   <p className="font-medium text-heading">{c.type} &middot; {c.staffName}</p>
                   <p className="text-xs text-body mt-1">{c.summary}</p>
                   <p className="text-xs text-muted mt-1">{new Date(c.createdAt).toLocaleDateString()}</p>
@@ -97,12 +97,12 @@ export function ClientDetail({ client }: { client: any }) {
           </section>
         </div>
 
-        <section className="glass-panel rounded-lg p-6 shadow-soft">
+        <section className="glass-panel rounded-lg p-5 shadow-soft transition hover:border-gold/25 sm:p-6">
           <h2 className="font-heading text-lg font-semibold text-heading">Quotes & Invoices</h2>
           <div className="mt-4 space-y-2">
             {client.quotes.length === 0 && <p className="text-sm text-muted">No quotes generated yet.</p>}
             {client.quotes.map((q: any) => (
-              <div key={q.id} className="rounded-md border border-edge bg-panel px-3 py-2 text-sm">
+              <div key={q.id} className="rounded-md border border-edge bg-panel px-3 py-2.5 text-sm transition hover:border-gold/20">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="font-medium text-heading">{q.services}</p>
                   <p className="font-bold text-heading">AED {q.total}</p>
