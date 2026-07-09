@@ -58,6 +58,7 @@ model Document {
   type       String
   fileUrl    String
   expiryDate DateTime?
+  createdAt  DateTime  @default(now())
   client     Client    @relation(fields: [clientId], references: [id])
 }
 
