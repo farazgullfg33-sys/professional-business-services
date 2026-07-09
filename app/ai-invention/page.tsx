@@ -105,7 +105,7 @@ export default function AiInventionPage() {
               <h2 className="mt-3 font-heading text-2xl font-semibold text-heading md:text-3xl">See It Running on a Real Case Load</h2>
               <p className="mt-3 leading-7 text-body">
                 Faraz Gull would like to walk Muhammad Waqas through the system directly — how it tracks a live client file
-                end to end, and how it plugs into the office's existing PRO workflow.
+                end to end, and how it plugs into the office{"'"}s existing PRO workflow.
               </p>
             </div>
             <a
