@@ -69,6 +69,27 @@ fd70cd68 style: polish client detail page — mobile padding, row hover
 - Claude reads this file → has ALL context → executes
 - After every phase: git commit + push
 
+### CODEX BRAIN (Purana OpenAI Codex Backup)
+- 📁 **Location:** `~/.codex/`
+- **Contents:** 70+ skills, config.toml, goals_1.sqlite (session DB), auth.json, browser profiles
+- **Status:** RETIRED — replaced by Claude Code
+- **Use:** Reference only — old PRO site build history, website building patterns
+- Claude can read these: `Read(~/codex/skills/*.md)` for reference
+
+### ALL PROJECTS (Laptop pe active)
+| Project | Path | Status |
+|---------|------|--------|
+| **PRO Site** (active) | `~/projects/professional-business-services/` | 🔄 Rebuilding |
+| AI Invention Main | `~/projects/ai-invention-website/` | ✅ Deployed |
+| AI Command Centre | `~/projects/ai-invention-command-centre/` | ✅ Admin tools |
+
+### HOW CLAUDE WORKS (for Faraz)
+- **Claude Code = TERMINAL only** — no GUI app, no Electron window
+- **claude.ai web = ALAG** — browser chat, no connection to terminal work
+- **CLAUDE.md = Claude's memory** — har session ke start mein auto-load hota hai
+- **Git Bash me `claude` likho** → interactive chat khul jayegi → Hinglish mein bolo
+- **Ya `claude -p "kaam"`** → ek command, kaam khatam, exit
+
 ## What Codex Built Here (Original Build)
 Codex built the complete PRO office admin panel for UAE business services. 18 playbook skills defined.
 
