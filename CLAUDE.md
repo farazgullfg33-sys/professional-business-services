@@ -1,159 +1,83 @@
-# PRO Business Services — UAE Professional Services Platform
+# 🔷 PRO SERVICES UAE — CLAUDE.md (Project Context)
 
-## 📊 CURRENT STATUS — July 2026 Rebuild (Faraz Directing)
+## Project Overview
+- **Client:** Muhammad Waqas, CEO, Professional Business Services
+- **Location:** Abu Dhabi, UAE | **Phone:** +971 568 185 548
+- **Site:** pro.aiinvention.tech | **Admin:** admin-pro.aiinvention.tech
+- **Goal:** Build premium PRO services system → impress Waqas → pitch Faraz as AI Manager
+- **AI Invention:** ZERO public mention — backend only, white-label
+- **Hidden Page:** /ai-invention (in repo, unlinked from nav)
 
-### WHO THIS IS FOR
-Muhammad Waqas's personal PRO services company. CEO: Muhammad Waqas. AI Invention is INVISIBLE (white-label backend only). Faraz = behind the scenes.
-
-### DESIGN SYSTEM
-- Navy #0a1628 / Gold #c9a84c / White
-- Playfair Display (headings) + Inter (body)
-- Glassmorphism cards, premium consulting-firm feel
-- Light/dark toggle via ThemeProvider
-
-### ALL PHASES COMPLETE
-
-| Phase | What | Status |
-|-------|------|--------|
-| 1 | White-label cleanup: AI content removed, real PRO stats | ✅ |
-| 2 | Public pages: Home, About, CEO Msg, Services, Contact, Quote, Blog, FAQ, Privacy, Terms | ✅ |
-| 3 | Admin panel: Dashboard, kanban pipeline, charts, SSE live, mobile fixes | ✅ |
-| 4 | Telegram/WhatsApp webhook handlers | ✅ |
-| 5 | Hidden /ai-invention pitch page (noindex, not linked) | ✅ |
-| — | Git direct access: Claude → GitHub → VPS deploy | ✅ |
-
-### RECENT GIT LOG (July 9, 2026)
-```
-bfe1ba19 style: finalize admin panel polish — remaining cleanup
-fd70cd68 style: polish client detail page — mobile padding, row hover
-4ae6d078 style: premium dashboard polish — icon badges, hover accents
-41c27819 feat: touch-friendly kanban + responsive table scroll wrappers
-2139bd4e feat: mobile hamburger sidebar drawer for admin panel
-59bbee74 feat: about page — CEO bio, team placeholders, office location
-0093f848 style: Phase 1 — remove AI Invention content, white-label PRO
-```
-
-### KEY FILES (what everything is)
-- `lib/company.ts` — ALL company data: name, phone, stats, services, FAQs, team
-- `app/page.tsx` — Homepage (hero, services grid, why-us, how-it-works, client portal, leadership, results, CTA)
-- `app/about/page.tsx` — About with CEO bio + office location
-- `app/ceo-message/page.tsx` — CEO message from Muhammad Waqas
-- `app/services/page.tsx` — Detailed services with sections
-- `app/contact/page.tsx` — Contact form + address
-- `app/quote/page.tsx` — Quote request form
-- `app/ai-invention/page.tsx` — HIDDEN pitch page for Waqas
-- `components/SiteChrome.tsx` — Navbar, Footer, TopBar, FloatingWidgets
-- `components/home/HomeSections.tsx` — HowItWorksFlow, DashboardPreview, WhyChooseUs, LeadershipTeam
-- `components/admin/AdminPanel.tsx` — Main admin dashboard shell
-- `components/admin/Charts.tsx` — Recharts revenue/pipeline/funnel
-- `tailwind.config.ts` — Navy, gold, fonts, shadows already configured
-
-### CRITICAL RULES (NEVER BREAK)
-1. ❌ "AI Invention", "Faraz", "AI agents", "AI-powered", "automation" — ZERO on public pages
-2. ❌ "Waqas Bhai" — use "Muhammad Waqas"
-3. ❌ Fake testimonials with made-up names
-4. ✅ Professional Business Services branding only
-5. ✅ Muhammad Waqas as CEO
-6. ✅ Real PRO services: ICP, MOHRE, GDRFA, TAMM
-7. ✅ Git: commit after every change, push to main, no PRs
-8. ✅ `git add app/ components/ lib/` — NEVER `git add .` or `-A` (includes node_modules)
-
-### DEPLOY
-- VPS ONLY: `cd /opt/professionalbs && git pull && docker compose up -d --build`
-- Env vars needed: DEEPSEEK_API_KEY, TELEGRAM_BOT_TOKEN, WHATSAPP_*
-- Live: https://pro.aiinvention.tech | Admin: https://admin-pro.aiinvention.tech/admin
-
-### FARAZ'S FLOW
-- Faraz opens terminal → `cd ~/projects/professional-business-services && claude`
-- Gives instructions directly in Hinglish
-- Claude reads this file → has ALL context → executes
-- After every phase: git commit + push
-
-### CODEX BRAIN (Purana OpenAI Codex Backup)
-- 📁 **Location:** `~/.codex/`
-- **Contents:** 70+ skills, config.toml, goals_1.sqlite (session DB), auth.json, browser profiles
-- **Status:** RETIRED — replaced by Claude Code
-- **Use:** Reference only — old PRO site build history, website building patterns
-- Claude can read these: `Read(~/codex/skills/*.md)` for reference
-
-### ALL PROJECTS (Laptop pe active)
-| Project | Path | Status |
-|---------|------|--------|
-| **PRO Site** (active) | `~/projects/professional-business-services/` | 🔄 Rebuilding |
-| AI Invention Main | `~/projects/ai-invention-website/` | ✅ Deployed |
-| AI Command Centre | `~/projects/ai-invention-command-centre/` | ✅ Admin tools |
-
-### HOW CLAUDE WORKS (for Faraz)
-- **Claude Code = TERMINAL only** — no GUI app, no Electron window
-- **claude.ai web = ALAG** — browser chat, no connection to terminal work
-- **CLAUDE.md = Claude's memory** — har session ke start mein auto-load hota hai
-- **Git Bash me `claude` likho** → interactive chat khul jayegi → Hinglish mein bolo
-- **Ya `claude -p "kaam"`** → ek command, kaam khatam, exit
-
-## What Codex Built Here (Original Build)
-Codex built the complete PRO office admin panel for UAE business services. 18 playbook skills defined.
+## Brand Identity
+- **Navy:** #0a1628 | **Gold:** #c9a84c | **White:** #ffffff
+- **Light BG:** #f8fafc | **Text:** #334155 | **Muted:** #64748b | **Border:** #e2e8f0
+- **Heading Font:** Playfair Display | **Body Font:** Inter
+- **Vibe:** Premium PRO office, physical team, govt counters — NOT law firm, NOT AI
 
 ## Stack
-- **Frontend:** Next.js 14 App Router, TypeScript, Tailwind CSS
-- **Backend:** Prisma ORM + PostgreSQL
-- **Deploy:** Docker Compose on VPS (`pro-db` + `web` containers)
-- **Live:** https://pro.aiinvention.tech
-- **Admin:** https://admin-pro.aiinvention.tech/admin
-- **Admin Login:** admin@professionalbs.local / Pass123!
+- **Frontend:** Next.js, Tailwind CSS
+- **Backend:** Prisma, PostgreSQL 16
+- **Deploy:** Docker, Traefik (ai-invention_default network)
+- **Repo:** professional-business-services (GitHub)
 
-## What's Built (Latest Commit: 9843cc4)
-- ✅ Full admin panel: client CRUD
-- ✅ Quote + invoice generation
-- ✅ PDF generation
-- ✅ CSV export
-- ✅ Status pipeline
-- ✅ Quick actions functional
-- ✅ Proper modals
+## Key Design Rules
+- Light theme only
+- Professional, high-trust feel
+- Team photos, office images (professional stock or placeholder)
+- Service cards with icons, gradient accents (navy→gold)
+- CTA buttons: Gold #c9a84c on Navy bg
+- Float contact button (WhatsApp)
 
-## 18 PRO Playbook Skills (UAE Operations)
-1. **client-intake-manager** — New client onboarding
-2. **client-support-helpline** — Ongoing client support
-3. **client-tracking-system** — Track all client cases
-4. **immigration-specialist** — UAE immigration processing
-5. **pro-visa-processor** — Visa applications & renewals
-6. **pro-company-former** — Company formation in UAE
-7. **pro-license-manager** — Trade license management
-8. **pro-compliance-officer** — Regulatory compliance
-9. **pro-document-attester** — Document attestation services
-10. **pro-government-liaison** — Government department coordination
-11. **pro-mohre-portal** — Ministry of Human Resources & Emiratisation
-12. **pro-tamm-portal** — Abu Dhabi government services
-13. **finance-billing** — Invoicing, payments, financial tracking
-14. **lead-generation-outreach** — Client acquisition
-15. **seo-content-writer** — Content for PRO services
-16. **social-media-manager** — Social media management
-17. **hr-payroll** — HR & payroll management
-18. **operations-manager** — Overall operations workflow
-19. **oil-gas-compliance** — Oil & gas sector compliance
+## 20 PRO Services (Quick Reference)
+1. Company Formation — Mainland LLC, freezone, branch setup
+2. Visa Processing — Entry, residence, family, Golden, Green
+3. License Renewal & Amendment — Trade license, activities
+4. Document Attestation — Educational, marriage, commercial, MOFA
+5. Government Liaison — ICP, GDRFA, MOHRE, DED, ADDED visits
+6. MOHRE Labour — Work permits, Akdi, WPS, Emiratisation
+7. Tamm Portal — Abu Dhabi unified government portal
+8. Compliance — ESR, VAT, AML, PDPL, contract review
+9. Immigration — Golden visa 10yr, Green visa 5yr
+10. Oil & Gas — ICV, ISO, ADNOC registration
+11. Client Intake — Needs discovery, document checklist
+12. Client Tracking — Pipeline, expiry alerts, dashboard
+13. Client Support — Status updates, complaint handling
+14. Finance & Billing — Invoicing, payment, reconciliation
+15. HR & Payroll — Staff, attendance, WPS, leave
+16. Lead Generation — Cold calls, WhatsApp, email, referrals
+17. Operations — Task assignment, KPIs, QA, escalations
+18. Receptionist Chatbot — 24/7 FAQ, lead capture
+19. SEO Content — Blog posts, UAE business guides
+20. Social Media — Instagram, Facebook, LinkedIn
 
-## Git Rules
-- After EVERY file change, commit + push to origin main
-- Use conventional commits: fix:, feat:, style:, refactor:
-- NEVER create PRs — push directly to main
-- Remote: https://farazgullfg33-sys:TOKEN@github.com/farazgullfg33-sys/professional-business-services.git
+## Architecture
+- Main site: Landing pages, service pages, about, blog, contact, quote
+- Admin: File tracking, client pipeline, staff dashboard, reports
+- Hidden /ai-invention page: Partnership pitch for Waqas Bhai
+- Email: hello@aiinvention.tech (temporary — use Zoho Mail when pro domain bought)
 
-## VPS Deploy Info
-- **Path on VPS:** /opt/professionalbs/
-- **Docker Compose:** pro-db (PostgreSQL) + web (Next.js)
-- **⚠️ Docker DNS:** Service names MUST be unique — use `pro-db` NOT `db`
-- **⚠️ Traefik:** Each router needs explicit `service=` label
-- **⚠️ VPS Hermes handles ALL deployment — laptop only codes + pushes**
+## Development Rules
+- NEVER modify database schema without approval
+- Prisma migrations: `npx prisma migrate dev --name <name>`
+- Build: `npm run build` → verify no errors
+- Deploy: Git push → VPS Hermes deploys via Docker
 
-## Codex Session History for PRO
-- Codex worked on PRO playbook skills directory: `Downloads/pro office uae playbook/`
-- Skills were defined as markdown files with YAML frontmatter
-- Admin panel was codex-built with full CRUD
+## Design Tokens (CSS Variables)
+```css
+:root {
+  --navy: #0a1628;
+  --gold: #c9a84c;
+  --white: #ffffff;
+  --light-bg: #f8fafc;
+  --text: #334155;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --heading-font: 'Playfair Display', serif;
+  --body-font: 'Inter', sans-serif;
+}
+```
 
-## Critical Pitfalls
-1. **Docker service names** — always `pro-db`, never just `db` (conflicts with other compose files)
-2. **Traefik labels** — must have explicit `traefik.http.services.<name>.loadbalancer.server.port` AND `traefik.http.routers.<name>.service=<name>`
-3. **Database migrations** — always run `npx prisma migrate deploy` after schema changes
-4. **Never deploy from laptop** — git push only, VPS Hermes handles Docker rebuild
-
-## ⚠️ PRO PROJECT RULE
-Faraz personally directs all PRO project work. No autonomous builds. Faraz discusses, gives input, then step-by-step work happens.
+## Interview Info
+- "Muhammad Waqas" publicly | "Waqas Bhai" privately (Faraz only)
+- Faraz = AI Invention UAE Manager (hidden)
+- Strategy: System impressive ho → then pitch → then Faraz hired

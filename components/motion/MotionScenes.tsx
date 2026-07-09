@@ -1,16 +1,60 @@
 "use client";
 
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import type { ReactNode } from "react";
-import { formatNumber } from "@/lib/utils";
+import { AnimatePresence, animate, motion, useInView, useMotionValue, useScroll, useSpring, useTransform } from "framer-motion";
+import { ChevronDown, Quote } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { cn, formatNumber } from "@/lib/utils";
+
+export function Reveal({
+  children,
+  className,
+  delay = 0,
+  y = 22,
+  x = 0,
+  as = "div"
+}: {
+  children: ReactNode;
+  className?: string;
+  delay?: number;
+  y?: number;
+  x?: number;
+  as?: "div" | "li";
+}) {
+  const MotionTag = as === "li" ? motion.li : motion.div;
+  return (
+    <MotionTag
+      className={className}
+      initial={{ opacity: 0, y, x }}
+      whileInView={{ opacity: 1, y: 0, x: 0 }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {children}
+    </MotionTag>
+  );
+}
 
 export function StatsCounter({ value, suffix = "", label }: { value: number; suffix?: string; label: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-40px" });
+  const [display, setDisplay] = useState(0);
+
+  useEffect(() => {
+    if (!inView) return;
+    const controls = animate(0, value, {
+      duration: 1.6,
+      ease: "easeOut",
+      onUpdate: (latest) => setDisplay(Math.round(latest))
+    });
+    return () => controls.stop();
+  }, [inView, value]);
+
   return (
     <motion.div className="text-center" initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-      <motion.span className="block font-heading text-3xl font-bold text-heading md:text-4xl">
-        {formatNumber(value)}
+      <span ref={ref} className="block font-heading text-3xl font-bold text-heading md:text-4xl">
+        {formatNumber(display)}
         {suffix}
-      </motion.span>
+      </span>
       <span className="mt-1 block text-sm font-medium text-muted">{label}</span>
     </motion.div>
   );
@@ -92,6 +136,8 @@ export function GlowOrb() {
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
       <motion.div className="absolute right-8 top-8 h-52 w-52 rounded-full bg-gold/20 blur-3xl" animate={{ y: [0, 24, 0], scale: [1, 1.08, 1] }} transition={{ duration: 8, repeat: Infinity }} />
       <motion.div className="absolute bottom-8 left-10 h-36 w-36 rounded-full bg-gold/10 blur-3xl" animate={{ y: [0, -18, 0], x: [0, 12, 0] }} transition={{ duration: 7, repeat: Infinity }} />
+      <motion.div className="absolute left-1/3 top-1/2 h-3 w-3 rounded-full bg-gold/70" animate={{ y: [0, -30, 0], opacity: [0.7, 0.15, 0.7] }} transition={{ duration: 6, repeat: Infinity, delay: 0.4 }} />
+      <motion.div className="absolute right-1/4 top-1/4 h-2 w-2 rounded-full bg-gold/60" animate={{ y: [0, 22, 0], opacity: [0.6, 0.1, 0.6] }} transition={{ duration: 5, repeat: Infinity, delay: 1.1 }} />
     </div>
   );
 }
@@ -103,8 +149,12 @@ export function CardTilt({ children }: { children: ReactNode }) {
   const rotateY = useSpring(useTransform(x, [-50, 50], [-7, 7]), { stiffness: 180, damping: 18 });
   return (
     <motion.div
-      className="glass-panel h-full rounded-lg p-7 shadow-soft"
+      className="glass-panel group h-full rounded-lg p-7 shadow-soft transition-shadow duration-300 hover:shadow-gold"
       style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
+      initial={{ opacity: 0, y: 18 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-60px" }}
+      whileHover={{ scale: 1.02 }}
       onMouseMove={(event) => {
         const rect = event.currentTarget.getBoundingClientRect();
         x.set(event.clientX - rect.left - rect.width / 2);
@@ -117,6 +167,112 @@ export function CardTilt({ children }: { children: ReactNode }) {
     >
       {children}
     </motion.div>
+  );
+}
+
+export function TypingText({ text, className, startDelay = 0 }: { text: string; className?: string; startDelay?: number }) {
+  const [display, setDisplay] = useState("");
+
+  useEffect(() => {
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) {
+      setDisplay(text);
+      return;
+    }
+    let index = 0;
+    let intervalId: ReturnType<typeof setInterval>;
+    const timeoutId = setTimeout(() => {
+      intervalId = setInterval(() => {
+        index += 1;
+        setDisplay(text.slice(0, index));
+        if (index >= text.length) clearInterval(intervalId);
+      }, 70);
+    }, startDelay);
+    return () => {
+      clearTimeout(timeoutId);
+      clearInterval(intervalId);
+    };
+  }, [text, startDelay]);
+
+  return (
+    <span className={className}>
+      {display}
+      <motion.span
+        className="ml-0.5 inline-block h-[0.85em] w-[2px] translate-y-[0.1em] bg-gold align-middle"
+        animate={{ opacity: [1, 1, 0, 0] }}
+        transition={{ duration: 0.9, repeat: Infinity, times: [0, 0.5, 0.5, 1] }}
+        aria-hidden="true"
+      />
+    </span>
+  );
+}
+
+export function ScrollCue() {
+  return (
+    <motion.div
+      className="pointer-events-none absolute bottom-6 left-1/2 z-10 -translate-x-1/2 text-gold/70"
+      animate={{ y: [0, 10, 0] }}
+      transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+      aria-hidden="true"
+    >
+      <ChevronDown size={26} />
+    </motion.div>
+  );
+}
+
+export function ParallaxWrap({ children, offset = 36, className }: { children: ReactNode; offset?: number; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  const y = useTransform(scrollYProgress, [0, 1], [-offset, offset]);
+  return (
+    <div ref={ref} className={className}>
+      <motion.div style={{ y }}>{children}</motion.div>
+    </div>
+  );
+}
+
+type Testimonial = { name: string; company: string; text: string };
+
+export function TestimonialCarousel({ items }: { items: Testimonial[] }) {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setIndex((value) => (value + 1) % items.length), 5500);
+    return () => clearInterval(id);
+  }, [items.length]);
+
+  const active = items[index];
+
+  return (
+    <div className="glass-panel relative overflow-hidden rounded-xl p-8 shadow-soft sm:p-10">
+      <Quote className="h-9 w-9 text-gold/50" />
+      <div className="mt-4 min-h-[168px] sm:min-h-[128px]">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={active.name}
+            initial={{ opacity: 0, x: 28 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -28 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <p className="text-lg leading-8 text-body sm:text-xl">&ldquo;{active.text}&rdquo;</p>
+            <p className="mt-6 font-heading text-base font-semibold text-heading">{active.name}</p>
+            <p className="text-sm text-gold">{active.company}</p>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+      <div className="mt-8 flex gap-2">
+        {items.map((item, itemIndex) => (
+          <button
+            key={item.name}
+            type="button"
+            aria-label={`Show testimonial from ${item.name}`}
+            className={cn("h-2 rounded-full transition-all duration-300", itemIndex === index ? "w-8 bg-gold" : "w-2 bg-edge hover:bg-gold/50")}
+            onClick={() => setIndex(itemIndex)}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 

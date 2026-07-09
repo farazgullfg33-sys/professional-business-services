@@ -4,8 +4,8 @@ import { Button } from "@/components/Button";
 import { SectionHeading } from "@/components/SectionHeading";
 import { HeroCanvas } from "@/components/HeroCanvas";
 import { DashboardPreview, HowItWorksFlow, LeadershipTeam, WhyChooseUs } from "@/components/home/HomeSections";
-import { CardTilt, StatsCounter } from "@/components/motion/MotionScenes";
-import { company, serviceHighlights, teamStats } from "@/lib/company";
+import { CardTilt, Reveal, ScrollCue, StatsCounter, TestimonialCarousel, TypingText } from "@/components/motion/MotionScenes";
+import { company, serviceHighlights, teamStats, testimonials } from "@/lib/company";
 
 export default function HomePage() {
   const whatsappHref = `https://wa.me/${company.whatsapp.replace(/\D/g, "")}`;
@@ -34,7 +34,7 @@ export default function HomePage() {
             Trusted PRO Services — Abu Dhabi, UAE
           </p>
           <h1 className="mx-auto max-w-4xl font-heading text-4xl font-bold leading-tight text-heading sm:text-5xl md:text-6xl">
-            Your UAE PRO Services Partner
+            Your UAE <TypingText text="PRO Services Partner" className="text-gold" />
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-body sm:text-lg">
             Company formation, visa processing, and government liaison — handled by experienced PRO officers in Abu Dhabi.
@@ -43,6 +43,7 @@ export default function HomePage() {
             <Button href="/quote">Get Free Consultation</Button>
             <Button href="/services" variant="outline">Our Services</Button>
           </div>
+          <ScrollCue />
         </div>
         {/* Stats Bar */}
         <div className="section-shell relative -mt-6 grid gap-5 rounded-lg border border-edge bg-glass p-6 shadow-soft backdrop-blur md:grid-cols-4">
@@ -63,10 +64,10 @@ export default function HomePage() {
               const Icon = service.icon;
               return (
                 <CardTilt key={service.title}>
-                  <Icon className="h-10 w-10 text-gold" />
+                  <Icon className="h-10 w-10 text-gold transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6" />
                   <h3 className="mt-5 font-heading text-xl font-semibold text-heading">{service.title}</h3>
                   <p className="mt-3 min-h-20 text-sm leading-6 text-body">{service.description}</p>
-                  <Link href={service.href} className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-gold">
+                  <Link href={service.href} className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-gold transition-transform duration-300 group-hover:translate-x-1">
                     Learn More <ArrowRight size={16} />
                   </Link>
                 </CardTilt>
@@ -143,19 +144,29 @@ export default function HomePage() {
               { value: "5,000+", label: "Visas Processed" },
               { value: "98%", label: "First-Time Approval" },
               { value: "15+ Years", label: "Combined Experience" },
-            ].map((item) => (
-              <div key={item.label} className="glass-panel rounded-lg p-6 text-center shadow-soft">
+            ].map((item, index) => (
+              <Reveal key={item.label} delay={index * 0.08} className="glass-panel rounded-lg p-6 text-center shadow-soft">
                 <p className="font-heading text-3xl font-bold text-gold">{item.value}</p>
                 <p className="mt-2 text-sm font-medium text-body">{item.label}</p>
-              </div>
+              </Reveal>
             ))}
           </div>
         </div>
       </section>
 
+      {/* Testimonials */}
+      <section className="py-16 sm:py-24">
+        <div className="section-shell">
+          <SectionHeading eyebrow="Client Voices" align="center" title="What Our Clients Say" copy="Feedback from business owners we've supported across Abu Dhabi and the UAE." />
+          <Reveal className="mx-auto mt-10 max-w-2xl" delay={0.1}>
+            <TestimonialCarousel items={testimonials} />
+          </Reveal>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="py-14 sm:py-20">
-        <div className="section-shell flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
+        <Reveal className="section-shell flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
           <div>
             <h2 className="font-heading text-2xl font-semibold text-heading sm:text-3xl">Ready to Start Your Business in UAE?</h2>
             <p className="mt-3 text-body">Send your request and our team will prepare the right service package for you.</p>
@@ -164,7 +175,7 @@ export default function HomePage() {
             <Button href={whatsappHref} className="!bg-[#25D366] !text-white hover:!bg-[#1ebe59]"><MessageCircle size={18} /> WhatsApp Us</Button>
             <Button href="/quote">Get Free Quote</Button>
           </div>
-        </div>
+        </Reveal>
       </section>
     </main>
   );

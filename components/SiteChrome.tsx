@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { Bot, ChevronUp, Clock, Menu, Phone, Send, X } from "lucide-react";
 import { Button } from "@/components/Button";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -137,17 +138,33 @@ export function FloatingWidgets() {
               setSent(true);
             }}
           >
-            <input name="name" placeholder="Name" className="w-full rounded-md border border-edge bg-base px-3 py-2 text-sm text-heading placeholder:text-muted" />
-            <input name="phone" placeholder="Phone" className="w-full rounded-md border border-edge bg-base px-3 py-2 text-sm text-heading placeholder:text-muted" />
-            <textarea name="message" required placeholder="How can we help?" className="h-24 w-full rounded-md border border-edge bg-base px-3 py-2 text-sm text-heading placeholder:text-muted" />
-            <button className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-gold px-3 py-2 text-sm font-semibold text-navy"><Send size={16} /> Send</button>
+            <input name="name" placeholder="Name" className="w-full rounded-md border border-edge bg-base px-3 py-2 text-sm text-heading placeholder:text-muted transition-all duration-300 focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30" />
+            <input name="phone" placeholder="Phone" className="w-full rounded-md border border-edge bg-base px-3 py-2 text-sm text-heading placeholder:text-muted transition-all duration-300 focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30" />
+            <textarea name="message" required placeholder="How can we help?" className="h-24 w-full rounded-md border border-edge bg-base px-3 py-2 text-sm text-heading placeholder:text-muted transition-all duration-300 focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30" />
+            <button className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-gold px-3 py-2 text-sm font-semibold text-navy transition-transform duration-200 hover:-translate-y-0.5 active:scale-95"><Send size={16} /> Send</button>
             {sent ? <p className="text-xs font-medium text-gold">Thanks. The conversation was saved.</p> : null}
           </form>
         </div>
       ) : null}
-      <button className="flex h-12 w-12 items-center justify-center rounded-full bg-gold text-navy shadow-gold" onClick={() => setChatOpen((value) => !value)} aria-label="Open chatbot">
-        {chatOpen ? <ChevronUp /> : <Bot />}
-      </button>
+      <div className="relative">
+        {!chatOpen ? (
+          <motion.span
+            className="absolute inset-0 rounded-full bg-gold/50"
+            animate={{ scale: [1, 1.6], opacity: [0.6, 0] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
+            aria-hidden="true"
+          />
+        ) : null}
+        <motion.button
+          className="relative flex h-12 w-12 items-center justify-center rounded-full bg-gold text-navy shadow-gold"
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.92 }}
+          onClick={() => setChatOpen((value) => !value)}
+          aria-label="Open chatbot"
+        >
+          {chatOpen ? <ChevronUp /> : <Bot />}
+        </motion.button>
+      </div>
     </div>
   );
 }

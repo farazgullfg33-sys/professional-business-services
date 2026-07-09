@@ -1,4 +1,5 @@
 import { FAQAccordion } from "@/components/FAQAccordion";
+import { Reveal } from "@/components/motion/MotionScenes";
 import { faqs } from "@/lib/company";
 
 export const metadata = {
@@ -21,7 +22,9 @@ export default function FAQPage() {
     <main className="bg-panel py-20">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
       <div className="section-shell">
-        <h1 className="font-heading text-4xl font-bold text-heading md:text-5xl">Frequently Asked Questions</h1>
+        <Reveal>
+          <h1 className="font-heading text-4xl font-bold text-heading md:text-5xl">Frequently Asked Questions</h1>
+        </Reveal>
         <FAQAccordion />
       </div>
     </main>

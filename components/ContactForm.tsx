@@ -29,10 +29,10 @@ export function ContactForm() {
           }
         }}
       >
-        <input name="name" placeholder="Name" className="w-full rounded-md border border-edge bg-base px-4 py-3 text-heading placeholder:text-muted" />
-        <input name="email" required type="email" placeholder="Email" className="w-full rounded-md border border-edge bg-base px-4 py-3 text-heading placeholder:text-muted" />
-        <input name="phone" placeholder="Phone" className="w-full rounded-md border border-edge bg-base px-4 py-3 text-heading placeholder:text-muted" />
-        <textarea name="message" required placeholder="Message" className="h-36 w-full rounded-md border border-edge bg-base px-4 py-3 text-heading placeholder:text-muted" />
+        <input name="name" placeholder="Name" className="w-full rounded-md border border-edge bg-base px-4 py-3 text-heading placeholder:text-muted transition-all duration-300 focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30" />
+        <input name="email" required type="email" placeholder="Email" className="w-full rounded-md border border-edge bg-base px-4 py-3 text-heading placeholder:text-muted transition-all duration-300 focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30" />
+        <input name="phone" placeholder="Phone" className="w-full rounded-md border border-edge bg-base px-4 py-3 text-heading placeholder:text-muted transition-all duration-300 focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30" />
+        <textarea name="message" required placeholder="Message" className="h-36 w-full rounded-md border border-edge bg-base px-4 py-3 text-heading placeholder:text-muted transition-all duration-300 focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30" />
         <Button type="submit"><Send size={18} /> Submit</Button>
         {status === "sent" ? <p className="text-sm font-semibold text-gold">Thank you. Your message has been saved.</p> : null}
         {status === "error" ? <p className="text-sm font-semibold text-red-400">Something went wrong. Please try again.</p> : null}
