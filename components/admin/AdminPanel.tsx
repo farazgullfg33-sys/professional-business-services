@@ -6,8 +6,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { signOut } from "next-auth/react";
 import {
   AlertTriangle, BarChart3, CalendarDays, CheckSquare, ClipboardList, Download, FileArchive, FileBadge,
-  FileText, FolderOpen, LayoutDashboard, LogOut, MessageSquareText, Plus, ReceiptText,
-  RefreshCcw, ShieldCheck, Sparkles, UserCog, UsersRound, Loader2, Wallet
+  FileText, FolderOpen, GripVertical, LayoutDashboard, LogOut, Menu, MessageSquareText, Plus, ReceiptText,
+  RefreshCcw, ShieldCheck, Sparkles, UserCog, UsersRound, Loader2, Wallet, X
 } from "lucide-react";
 import { Button } from "@/components/Button";
 import { cn } from "@/lib/utils";
@@ -98,6 +98,7 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
   const [loading, setLoading] = useState(false);
   const [showNewClient, setShowNewClient] = useState(false);
   const [showNewQuote, setShowNewQuote] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const fetchData = () => {
     setLoading(true);
@@ -153,16 +154,61 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
 
   return (
     <main className="min-h-screen bg-base text-body">
+      {/* MOBILE TOP BAR */}
+      <div className="sticky top-0 z-30 flex items-center justify-between border-b border-edge bg-base/95 px-4 py-3 backdrop-blur lg:hidden">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-gold/40 bg-gold/10 text-gold">
+            <Sparkles size={16} />
+          </span>
+          <h1 className="font-heading text-base font-bold text-heading">PRO Admin</h1>
+        </div>
+        <button
+          onClick={() => setMobileNavOpen(true)}
+          aria-label="Open menu"
+          className="flex h-10 w-10 items-center justify-center rounded-md border border-edge text-heading active:bg-panel"
+        >
+          <Menu size={20} />
+        </button>
+      </div>
+
+      {/* MOBILE OVERLAY */}
+      <AnimatePresence>
+        {mobileNavOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+            onClick={() => setMobileNavOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
       <div className="grid lg:grid-cols-[280px_1fr]">
-        <aside className="glass-panel border-r border-edge p-5 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-gold/40 bg-gold/10 text-gold">
-              <Sparkles size={18} />
-            </span>
-            <div>
-              <h1 className="font-heading text-lg font-bold text-heading">PRO Admin</h1>
-              <p className="text-xs text-muted">Role: {role ?? "staff"}</p>
+        <aside
+          className={cn(
+            "glass-panel fixed inset-y-0 left-0 z-50 w-[82vw] max-w-[300px] overflow-y-auto border-r border-edge p-5 shadow-soft transition-transform duration-300 ease-out",
+            "lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-auto lg:max-w-none lg:translate-x-0 lg:shadow-none",
+            mobileNavOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+        >
+          <div className="flex items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-gold/40 bg-gold/10 text-gold">
+                <Sparkles size={18} />
+              </span>
+              <div>
+                <h1 className="font-heading text-lg font-bold text-heading">PRO Admin</h1>
+                <p className="text-xs text-muted">Role: {role ?? "staff"}</p>
+              </div>
             </div>
+            <button
+              onClick={() => setMobileNavOpen(false)}
+              aria-label="Close menu"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-edge text-muted hover:text-heading lg:hidden"
+            >
+              <X size={17} />
+            </button>
           </div>
           <div className="mt-4 flex items-center gap-1.5 text-xs font-medium">
             <span className={cn("h-1.5 w-1.5 rounded-full", live ? "bg-emerald-400 animate-pulse" : "bg-muted")} />
@@ -172,10 +218,10 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
             {modules.map(m => { const I=m.icon; const isActive = active === m.name; return (
               <button
                 key={m.name}
-                onClick={()=>setActive(m.name)}
+                onClick={()=>{setActive(m.name); setMobileNavOpen(false);}}
                 className={cn(
-                  "flex items-center gap-3 rounded-md border px-3 py-2 text-left text-sm font-semibold transition",
-                  isActive ? "border-gold/30 bg-gold/15 text-gold" : "border-transparent text-muted hover:border-edge hover:bg-panel hover:text-heading"
+                  "flex min-h-11 items-center gap-3 rounded-md border px-3 py-2 text-left text-sm font-semibold transition",
+                  isActive ? "border-gold/30 bg-gold/15 text-gold shadow-[0_0_0_1px_rgba(201,168,76,0.08)_inset]" : "border-transparent text-muted hover:border-edge hover:bg-panel hover:text-heading"
                 )}
               >
                 <I size={17}/> {m.name}
@@ -184,10 +230,10 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
           </nav>
         </aside>
 
-        <section className="p-5 md:p-8">
+        <section className="p-4 sm:p-5 md:p-8">
           <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
             <div>
-              <h2 className="font-heading text-2xl font-semibold text-heading">{activeModule.name}</h2>
+              <h2 className="font-heading text-xl sm:text-2xl font-semibold text-heading">{activeModule.name}</h2>
               <p className="text-sm text-muted">{activeModule.detail}</p>
             </div>
             <div className="flex gap-2 flex-wrap">
