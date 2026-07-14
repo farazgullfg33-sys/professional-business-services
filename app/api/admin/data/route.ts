@@ -33,11 +33,12 @@ export async function GET() {
     safeData(() => db.from("Lead").select("*").order("createdAt", { ascending: false }).limit(50)),
     safeData(() => db.from("ContactSubmission").select("*").order("createdAt", { ascending: false }).limit(50)),
     safeData(() => db.from("QuoteRequest").select("*").order("createdAt", { ascending: false }).limit(50)),
-    safeData(() => db.from("ServiceRequest").select("*, Client(name)").order("createdAt", { ascending: false }).limit(50)),
-    safeData(() => db.from("FollowUp").select("*, Client(name)").order("dueDate", { ascending: true }).limit(50)),
-    safeData(() => db.from("Quote").select("*, Client(name, company)").order("createdAt", { ascending: false }).limit(50)),
-    safeData(() => db.from("Invoice").select("*, Quote(*, Client(name))").order("createdAt", { ascending: false }).limit(50)),
-    safeData(() => db.from("Document").select("*, Client(name)").not("expiryDate", "is", null).order("expiryDate", { ascending: true }).limit(50)),
+    // Alias joins to lowercase (client / quote) so the shape matches the component's access pattern
+    safeData(() => db.from("ServiceRequest").select("*, client:Client(name)").order("createdAt", { ascending: false }).limit(50)),
+    safeData(() => db.from("FollowUp").select("*, client:Client(name)").order("dueDate", { ascending: true }).limit(50)),
+    safeData(() => db.from("Quote").select("*, client:Client(name, company)").order("createdAt", { ascending: false }).limit(50)),
+    safeData(() => db.from("Invoice").select("*, quote:Quote(*, client:Client(name))").order("createdAt", { ascending: false }).limit(50)),
+    safeData(() => db.from("Document").select("*, client:Client(name)").not("expiryDate", "is", null).order("expiryDate", { ascending: true }).limit(50)),
   ]);
 
   const [clientCount, leadCount, contactCount, quoteReqCount, serviceCount, followUpCount] = await Promise.all([

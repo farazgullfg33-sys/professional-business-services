@@ -7,6 +7,9 @@ export async function middleware(request: NextRequest) {
 
   // Determine base response first — rewrite for admin subdomain, passthrough otherwise
   const adminDomain = process.env.ADMIN_DOMAIN || "admin.professionalbusines.com";
+  // effectivePathname is what the app actually renders — used for x-pathname so the
+  // root layout knows to drop the public chrome on the admin subdomain root.
+  let effectivePathname = pathname;
   let response: NextResponse;
   if (
     (hostname === adminDomain || hostname.includes("admin-pro")) &&
@@ -15,6 +18,7 @@ export async function middleware(request: NextRequest) {
   ) {
     const url = request.nextUrl.clone();
     url.pathname = `/admin${pathname === "/" ? "" : pathname}`;
+    effectivePathname = url.pathname;
     response = NextResponse.rewrite(url);
   } else {
     response = NextResponse.next({ request });
@@ -40,7 +44,7 @@ export async function middleware(request: NextRequest) {
 
   await supabase.auth.getUser();
 
-  response.headers.set("x-pathname", pathname);
+  response.headers.set("x-pathname", effectivePathname);
   return response;
 }
 
