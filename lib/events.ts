@@ -1,4 +1,4 @@
-export type AdminEvent = { type: "created" | "updated"; entity: "client" | "invoice" | "service" };
+export type AdminEvent = { type: "created" | "updated" | "deleted"; entity: "client" | "invoice" | "service" | "visa" | "license" | "formation" | "compliance" | "document" | "staff" };
 
 type Listener = (event: AdminEvent) => void;
 

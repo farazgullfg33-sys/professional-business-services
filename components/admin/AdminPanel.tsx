@@ -22,7 +22,12 @@ type Lead = { id: string; name: string; email?: string; phone?: string; serviceI
 type ServiceRow = { id: string; serviceType: string; status: string; priority: string; assignedTo?: string; deadline?: string; client: { name: string } };
 type FollowUp = { id: string; step: string; dueDate: string; client: { name: string } };
 type InvoiceRow = { id: string; amount: number; status: string; paidAt?: string; createdAt: string; quote: { client: { name: string } } };
-type DocumentRow = { id: string; name: string; type: string; expiryDate?: string; client: { name: string } };
+type DocumentRow = { id: string; name: string; type: string; fileUrl?: string; expiryDate?: string; client: { name: string } };
+type VisaRow = { id: string; type: string; status: string; applicationDate?: string; expiryDate?: string; remarks?: string; client: { name: string } };
+type LicenseRow = { id: string; licenseNumber?: string; type?: string; issueDate?: string; expiryDate?: string; status: string; client: { name: string } };
+type FormationRow = { id: string; clientId: string; step: number; name: string; completed: boolean; client: { name: string } };
+type ComplianceRow = { id: string; type: string; dueDate: string; status: string; notes?: string; client: { name: string } };
+type StaffRow = { id: string; name: string; email: string; role: string; active: boolean };
 
 const pipelineColumns = [
   { key: "new", label: "New", dot: "bg-blue-400" },
@@ -53,7 +58,7 @@ const urls = ["https://www.tamm.abudhabi","https://www.mohre.gov.ae","https://ic
 
 const bizTypes = ["trade","tech","consulting","holding","media","services","other"];
 const sources = ["direct","website","referral","walk-in","social","call"];
-const placeholders = ["Visa Tracker","Company Formation","License Calendar","Attestation Pipeline","Compliance Calendar","Documents","Communication Log","Staff & Performance"];
+const placeholders = ["Attestation Pipeline", "Communication Log"];
 
 const inputClass = "rounded-md border border-edge bg-base px-3 py-2 text-sm text-heading placeholder:text-muted focus:border-gold focus:outline-none";
 
@@ -99,6 +104,13 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
   const [showNewClient, setShowNewClient] = useState(false);
   const [showNewQuote, setShowNewQuote] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [showAddVisa, setShowAddVisa] = useState(false);
+  const [showAddLicense, setShowAddLicense] = useState(false);
+  const [showAddCompliance, setShowAddCompliance] = useState(false);
+  const [showAddDocument, setShowAddDocument] = useState(false);
+  const [showAddStaff, setShowAddStaff] = useState(false);
+  const [formationClientId, setFormationClientId] = useState("");
+  const [moduleSearch, setModuleSearch] = useState<Record<string, string>>({});
 
   const fetchData = () => {
     setLoading(true);
@@ -150,6 +162,61 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
     const f = new FormData(e.currentTarget);
     const r = await fetch("/api/admin/quote/create", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(Object.fromEntries(f)) });
     if (r.ok) { setShowNewQuote(false); fetchData(); alert("Quote created! Check Quotes & Invoices tab."); }
+  };
+
+  const postForm = async (url: string, e: React.FormEvent<HTMLFormElement>, onDone: () => void) => {
+    e.preventDefault();
+    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Object.fromEntries(new FormData(e.currentTarget))) });
+    if (r.ok) { onDone(); fetchData(); }
+  };
+
+  const toggleFormationStep = async (id: string, completed: boolean) => {
+    setData((prev: any) => prev ? { ...prev, formation: prev.formation?.map((f: FormationRow) => f.id === id ? { ...f, completed } : f) } : prev);
+    await fetch(`/api/admin/formation/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ completed }) });
+  };
+
+  const startFormation = async (clientId: string) => {
+    const r = await fetch("/api/admin/formation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientId }) });
+    if (r.ok) fetchData(); else { const d = await r.json(); alert(d.error || "Failed"); }
+  };
+
+  const toggleStaffActive = async (id: string, active: boolean) => {
+    setData((prev: any) => prev ? { ...prev, staff: prev.staff?.map((s: StaffRow) => s.id === id ? { ...s, active } : s) } : prev);
+    await fetch(`/api/admin/staff/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ active }) });
+  };
+
+  const deleteRecord = async (endpoint: string) => {
+    if (!confirm("Delete this record? This cannot be undone.")) return;
+    const r = await fetch(endpoint, { method: "DELETE" });
+    if (r.ok) fetchData();
+  };
+
+  const searchFilter = (items: any[], key: string, fields: string[]) => {
+    const q = (moduleSearch[key] ?? "").toLowerCase().trim();
+    if (!q) return items;
+    return items.filter(item => fields.some(f => {
+      const val = f.split(".").reduce((o: any, k: string) => o?.[k], item);
+      return String(val ?? "").toLowerCase().includes(q);
+    }));
+  };
+
+  const daysLeft = (date?: string) => date ? Math.ceil((new Date(date).getTime() - Date.now()) / 86400000) : null;
+
+  const expiryBadge = (days: number | null) => {
+    if (days === null) return null;
+    const cls = days < 0 ? "bg-red-500/15 text-red-300" : days <= 30 ? "bg-amber-500/15 text-amber-300" : days <= 60 ? "bg-gold/15 text-gold" : "bg-emerald-500/15 text-emerald-300";
+    return <span className={cn("text-xs px-2 py-0.5 rounded-full", cls)}>{days < 0 ? "Expired" : `${days}d`}</span>;
+  };
+
+  const statusBadge = (status: string) => {
+    const map: Record<string, string> = {
+      applied: "bg-blue-500/15 text-blue-300", approved: "bg-emerald-500/15 text-emerald-300",
+      renewed: "bg-blue-400/15 text-blue-200", expired: "bg-red-500/15 text-red-300",
+      active: "bg-emerald-500/15 text-emerald-300", inactive: "bg-red-500/15 text-red-300",
+      pending: "bg-amber-500/15 text-amber-300", completed: "bg-emerald-500/15 text-emerald-300",
+      new: "bg-blue-500/15 text-blue-300", in_progress: "bg-gold/15 text-gold",
+    };
+    return <span className={cn("text-xs px-2 py-0.5 rounded-full capitalize", map[status] ?? "bg-panel text-muted")}>{status}</span>;
   };
 
   return (
@@ -281,6 +348,100 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
                   <input name="services" placeholder="Services: Trade License, Visa Stamping..." className={inputClass} required/>
                   <div className="grid grid-cols-2 gap-3"><input name="govFees" type="number" step="0.01" placeholder="Govt Fees (AED)" className={inputClass}/><input name="proFees" type="number" step="0.01" placeholder="PRO Fees (AED)" className={inputClass}/></div>
                   <Button type="submit">Generate</Button>
+                </form>
+              </motion.div>
+            </div>
+          )}
+
+          {/* ADD VISA MODAL */}
+          {showAddVisa && data && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowAddVisa(false)}>
+              <motion.div initial={{ opacity: 0, y: 12, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} className="glass-panel w-full max-w-lg mx-4 rounded-lg p-6 shadow-soft" onClick={e => e.stopPropagation()}>
+                <h3 className="text-xl font-heading font-bold text-heading mb-4">Add Visa Record</h3>
+                <form className="grid gap-3" onSubmit={e => postForm("/api/admin/visa", e, () => setShowAddVisa(false))}>
+                  <select name="clientId" className={inputClass} required><option value="">Select Client *</option>{data.clients?.map((c: any) => <option key={c.id} value={c.id}>{c.name}{c.company ? ` (${c.company})` : ""}</option>)}</select>
+                  <div className="grid grid-cols-2 gap-3">
+                    <select name="type" className={inputClass} required><option value="">Visa Type *</option><option value="employment">Employment</option><option value="family">Family</option><option value="golden">Golden</option><option value="visit">Visit</option></select>
+                    <select name="status" className={inputClass}><option value="applied">Applied</option><option value="approved">Approved</option><option value="renewed">Renewed</option><option value="expired">Expired</option></select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><label className="text-xs text-muted">Application Date</label><input name="applicationDate" type="date" className={cn(inputClass, "mt-1 w-full")} /></div>
+                    <div><label className="text-xs text-muted">Expiry Date</label><input name="expiryDate" type="date" className={cn(inputClass, "mt-1 w-full")} /></div>
+                  </div>
+                  <textarea name="remarks" placeholder="Remarks" className={cn(inputClass, "h-16")} />
+                  <Button type="submit">Add Visa Record</Button>
+                </form>
+              </motion.div>
+            </div>
+          )}
+
+          {/* ADD LICENSE MODAL */}
+          {showAddLicense && data && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowAddLicense(false)}>
+              <motion.div initial={{ opacity: 0, y: 12, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} className="glass-panel w-full max-w-lg mx-4 rounded-lg p-6 shadow-soft" onClick={e => e.stopPropagation()}>
+                <h3 className="text-xl font-heading font-bold text-heading mb-4">Add Trade License</h3>
+                <form className="grid gap-3" onSubmit={e => postForm("/api/admin/license", e, () => setShowAddLicense(false))}>
+                  <select name="clientId" className={inputClass} required><option value="">Select Client *</option>{data.clients?.map((c: any) => <option key={c.id} value={c.id}>{c.name}{c.company ? ` (${c.company})` : ""}</option>)}</select>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input name="licenseNumber" placeholder="License Number" className={inputClass} />
+                    <select name="type" className={inputClass}><option value="">License Type</option><option value="Commercial">Commercial</option><option value="Professional">Professional</option><option value="Industrial">Industrial</option><option value="Tourism">Tourism</option><option value="Freezone">Freezone</option></select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><label className="text-xs text-muted">Issue Date</label><input name="issueDate" type="date" className={cn(inputClass, "mt-1 w-full")} /></div>
+                    <div><label className="text-xs text-muted">Expiry Date</label><input name="expiryDate" type="date" className={cn(inputClass, "mt-1 w-full")} /></div>
+                  </div>
+                  <select name="status" className={inputClass}><option value="active">Active</option><option value="renewal_due">Renewal Due</option><option value="expired">Expired</option><option value="cancelled">Cancelled</option></select>
+                  <Button type="submit">Add License</Button>
+                </form>
+              </motion.div>
+            </div>
+          )}
+
+          {/* ADD COMPLIANCE MODAL */}
+          {showAddCompliance && data && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowAddCompliance(false)}>
+              <motion.div initial={{ opacity: 0, y: 12, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} className="glass-panel w-full max-w-lg mx-4 rounded-lg p-6 shadow-soft" onClick={e => e.stopPropagation()}>
+                <h3 className="text-xl font-heading font-bold text-heading mb-4">Add Compliance Deadline</h3>
+                <form className="grid gap-3" onSubmit={e => postForm("/api/admin/compliance", e, () => setShowAddCompliance(false))}>
+                  <select name="clientId" className={inputClass} required><option value="">Select Client *</option>{data.clients?.map((c: any) => <option key={c.id} value={c.id}>{c.name}{c.company ? ` (${c.company})` : ""}</option>)}</select>
+                  <select name="type" className={inputClass} required><option value="">Compliance Type *</option><option value="ESR">ESR (Economic Substance)</option><option value="VAT">VAT Return</option><option value="AML">AML / CFT</option><option value="PDPL">PDPL (Data Protection)</option><option value="Audit">Annual Audit</option><option value="WPS">WPS Filing</option><option value="Other">Other</option></select>
+                  <div><label className="text-xs text-muted">Due Date *</label><input name="dueDate" type="date" className={cn(inputClass, "mt-1 w-full")} required /></div>
+                  <select name="status" className={inputClass}><option value="pending">Pending</option><option value="completed">Completed</option><option value="overdue">Overdue</option></select>
+                  <textarea name="notes" placeholder="Notes" className={cn(inputClass, "h-16")} />
+                  <Button type="submit">Add Deadline</Button>
+                </form>
+              </motion.div>
+            </div>
+          )}
+
+          {/* ADD DOCUMENT MODAL */}
+          {showAddDocument && data && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowAddDocument(false)}>
+              <motion.div initial={{ opacity: 0, y: 12, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} className="glass-panel w-full max-w-lg mx-4 rounded-lg p-6 shadow-soft" onClick={e => e.stopPropagation()}>
+                <h3 className="text-xl font-heading font-bold text-heading mb-4">Add Document</h3>
+                <form className="grid gap-3" onSubmit={e => postForm("/api/admin/documents", e, () => setShowAddDocument(false))}>
+                  <select name="clientId" className={inputClass} required><option value="">Select Client *</option>{data.clients?.map((c: any) => <option key={c.id} value={c.id}>{c.name}{c.company ? ` (${c.company})` : ""}</option>)}</select>
+                  <input name="name" placeholder="Document Name *" className={inputClass} required />
+                  <select name="type" className={inputClass} required><option value="">Document Type *</option><option value="passport">Passport</option><option value="visa">Visa</option><option value="trade_license">Trade License</option><option value="tenancy">Tenancy Contract</option><option value="moa">MOA</option><option value="ejari">EJARI</option><option value="other">Other</option></select>
+                  <input name="fileUrl" placeholder="File URL (Drive / OneDrive / Dropbox link) *" className={inputClass} required />
+                  <div><label className="text-xs text-muted">Expiry Date (optional)</label><input name="expiryDate" type="date" className={cn(inputClass, "mt-1 w-full")} /></div>
+                  <Button type="submit">Add Document</Button>
+                </form>
+              </motion.div>
+            </div>
+          )}
+
+          {/* ADD STAFF MODAL */}
+          {showAddStaff && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowAddStaff(false)}>
+              <motion.div initial={{ opacity: 0, y: 12, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} className="glass-panel w-full max-w-lg mx-4 rounded-lg p-6 shadow-soft" onClick={e => e.stopPropagation()}>
+                <h3 className="text-xl font-heading font-bold text-heading mb-4">Add Staff Member</h3>
+                <p className="text-sm text-muted mb-4">Adds the staff profile. Set up Supabase Auth separately for login access.</p>
+                <form className="grid gap-3" onSubmit={e => postForm("/api/admin/staff", e, () => setShowAddStaff(false))}>
+                  <input name="name" placeholder="Full Name *" className={inputClass} required />
+                  <input name="email" type="email" placeholder="Email *" className={inputClass} required />
+                  <select name="role" className={inputClass}><option value="pro">PRO Officer</option><option value="manager">Manager</option><option value="admin">Admin</option></select>
+                  <Button type="submit">Add Staff</Button>
                 </form>
               </motion.div>
             </div>
@@ -466,6 +627,286 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
               </div>}
 
               {active==="Follow-ups" && data && <div className="glass-panel rounded-lg shadow-soft"><div className="overflow-x-auto"><table className="w-full min-w-[420px] text-sm"><thead className="bg-panel"><tr><th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Client</th><th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Step</th><th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Due</th></tr></thead><tbody className="divide-y divide-edge">{data.followUps?.map((f:FollowUp)=><tr key={f.id} className="transition hover:bg-panel/60"><td className="px-4 py-3 font-medium text-heading">{f.client?.name ?? "—"}</td><td className="px-4 py-3 text-body">{f.step}</td><td className="px-4 py-3 text-muted">{new Date(f.dueDate).toLocaleDateString()}</td></tr>)}</tbody></table></div></div>}
+
+              {/* VISA TRACKER */}
+              {active === "Visa Tracker" && (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <input value={moduleSearch["visa"] ?? ""} onChange={e => setModuleSearch(p => ({ ...p, visa: e.target.value }))} placeholder="Search visas..." className={cn(inputClass, "flex-1 min-w-[160px]")} />
+                    <Button onClick={() => setShowAddVisa(true)}><Plus size={16} /> Add Visa</Button>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {(["applied","approved","renewed","expired"] as const).map(st => (
+                      <div key={st} className="glass-panel rounded-lg p-4 shadow-soft">
+                        <p className="text-xs text-muted capitalize">{st}</p>
+                        <p className="mt-1 font-heading text-2xl font-bold text-heading">{(data?.visas ?? []).filter((v: VisaRow) => v.status === st).length}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="glass-panel rounded-lg shadow-soft">
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[620px] text-sm">
+                        <thead className="bg-panel"><tr>{["Client","Type","Status","Applied","Expires","Days Left",""].map(h => <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">{h}</th>)}</tr></thead>
+                        <tbody className="divide-y divide-edge">
+                          {searchFilter(data?.visas ?? [], "visa", ["type","status","client.name","remarks"]).map((v: VisaRow) => {
+                            const d = daysLeft(v.expiryDate);
+                            return (
+                              <tr key={v.id} className="transition hover:bg-panel/60">
+                                <td className="px-4 py-3 font-medium text-heading">{v.client?.name ?? "—"}</td>
+                                <td className="px-4 py-3 capitalize text-body">{v.type}</td>
+                                <td className="px-4 py-3">{statusBadge(v.status)}</td>
+                                <td className="px-4 py-3 text-muted">{v.applicationDate ? new Date(v.applicationDate).toLocaleDateString() : "—"}</td>
+                                <td className="px-4 py-3 text-muted">{v.expiryDate ? new Date(v.expiryDate).toLocaleDateString() : "—"}</td>
+                                <td className="px-4 py-3">{expiryBadge(d)}</td>
+                                <td className="px-4 py-3 text-right"><button onClick={() => deleteRecord(`/api/admin/visa/${v.id}`)} className="text-xs text-red-400 hover:underline">Delete</button></td>
+                              </tr>
+                            );
+                          })}
+                          {(data?.visas ?? []).length === 0 && <tr><td colSpan={7} className="px-4 py-12 text-center text-muted">No visa records yet. <button onClick={() => setShowAddVisa(true)} className="text-gold hover:underline">Add the first one.</button></td></tr>}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* COMPANY FORMATION */}
+              {active === "Company Formation" && data && (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <select value={formationClientId} onChange={e => setFormationClientId(e.target.value)} className={cn(inputClass, "flex-1 min-w-[200px]")}>
+                      <option value="">All Clients</option>
+                      {data.clients?.map((c: any) => <option key={c.id} value={c.id}>{c.name}{c.company ? ` — ${c.company}` : ""}</option>)}
+                    </select>
+                  </div>
+                  {(() => {
+                    const allFormation: FormationRow[] = data?.formation ?? [];
+                    const clientIds: string[] = formationClientId
+                      ? [formationClientId]
+                      : Array.from(new Set(allFormation.map((f: FormationRow) => f.clientId)));
+
+                    const clientsWithNoFormation = (data.clients ?? []).filter((c: any) =>
+                      !allFormation.some((f: FormationRow) => f.clientId === c.id) &&
+                      (!formationClientId || c.id === formationClientId)
+                    );
+
+                    return (
+                      <div className="space-y-4">
+                        {clientIds.map((cid: string) => {
+                          const steps = allFormation.filter((f: FormationRow) => f.clientId === cid).sort((a, b) => a.step - b.step);
+                          const pct = steps.length > 0 ? Math.round((steps.filter(s => s.completed).length / steps.length) * 100) : 0;
+                          const clientName = steps[0]?.client?.name ?? (data.clients?.find((c: any) => c.id === cid)?.name ?? cid);
+                          return (
+                            <div key={cid} className="glass-panel rounded-lg p-5 shadow-soft">
+                              <div className="flex items-center justify-between mb-3">
+                                <div>
+                                  <h3 className="font-heading font-semibold text-heading">{clientName}</h3>
+                                  <p className="text-xs text-muted">{steps.filter(s => s.completed).length} / {steps.length} steps completed</p>
+                                </div>
+                                <span className={cn("text-sm font-bold", pct === 100 ? "text-emerald-400" : "text-gold")}>{pct}%</span>
+                              </div>
+                              <div className="w-full h-1.5 rounded-full bg-panel mb-4">
+                                <div className="h-full rounded-full bg-gold transition-all" style={{ width: `${pct}%` }} />
+                              </div>
+                              <div className="grid gap-1.5">
+                                {steps.map(s => (
+                                  <label key={s.id} className="flex items-center gap-3 rounded-md border border-edge px-3 py-2 text-sm cursor-pointer hover:border-gold/30 transition">
+                                    <input type="checkbox" checked={s.completed} onChange={e => toggleFormationStep(s.id, e.target.checked)} className="accent-gold h-4 w-4" />
+                                    <span className={cn(s.completed ? "line-through text-muted" : "text-body")}>
+                                      <span className="text-xs text-muted mr-2">{s.step}.</span>{s.name}
+                                    </span>
+                                    {s.completed && <span className="ml-auto text-emerald-400"><CheckSquare size={14}/></span>}
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {clientsWithNoFormation.map((c: any) => (
+                          <div key={c.id} className="glass-panel rounded-lg p-5 shadow-soft flex items-center justify-between">
+                            <div>
+                              <p className="font-heading font-semibold text-heading">{c.name}{c.company ? ` — ${c.company}` : ""}</p>
+                              <p className="text-xs text-muted">No formation checklist started</p>
+                            </div>
+                            <Button variant="outline" onClick={() => startFormation(c.id)}><Plus size={14}/> Start Formation</Button>
+                          </div>
+                        ))}
+                        {clientIds.length === 0 && clientsWithNoFormation.length === 0 && (
+                          <div className="glass-panel rounded-lg p-8 text-center shadow-soft">
+                            <p className="text-muted">No clients found. Add a client first.</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* LICENSE CALENDAR */}
+              {active === "License Calendar" && (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <input value={moduleSearch["license"] ?? ""} onChange={e => setModuleSearch(p => ({ ...p, license: e.target.value }))} placeholder="Search licenses..." className={cn(inputClass, "flex-1 min-w-[160px]")} />
+                    <Button onClick={() => setShowAddLicense(true)}><Plus size={16} /> Add License</Button>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {(["active","renewal_due","expired","cancelled"] as const).map(st => (
+                      <div key={st} className="glass-panel rounded-lg p-4 shadow-soft">
+                        <p className="text-xs text-muted capitalize">{st.replace("_"," ")}</p>
+                        <p className="mt-1 font-heading text-2xl font-bold text-heading">{(data?.licenses ?? []).filter((l: LicenseRow) => l.status === st).length}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="glass-panel rounded-lg shadow-soft">
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[660px] text-sm">
+                        <thead className="bg-panel"><tr>{["Client","License No","Type","Issued","Expires","Days Left","Status",""].map(h => <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">{h}</th>)}</tr></thead>
+                        <tbody className="divide-y divide-edge">
+                          {searchFilter(data?.licenses ?? [], "license", ["licenseNumber","type","status","client.name"]).map((l: LicenseRow) => {
+                            const d = daysLeft(l.expiryDate);
+                            return (
+                              <tr key={l.id} className="transition hover:bg-panel/60">
+                                <td className="px-4 py-3 font-medium text-heading">{l.client?.name ?? "—"}</td>
+                                <td className="px-4 py-3 text-body">{l.licenseNumber || "—"}</td>
+                                <td className="px-4 py-3 text-muted">{l.type || "—"}</td>
+                                <td className="px-4 py-3 text-muted">{l.issueDate ? new Date(l.issueDate).toLocaleDateString() : "—"}</td>
+                                <td className="px-4 py-3 text-muted">{l.expiryDate ? new Date(l.expiryDate).toLocaleDateString() : "—"}</td>
+                                <td className="px-4 py-3">{expiryBadge(d)}</td>
+                                <td className="px-4 py-3">{statusBadge(l.status)}</td>
+                                <td className="px-4 py-3 text-right"><button onClick={() => deleteRecord(`/api/admin/license/${l.id}`)} className="text-xs text-red-400 hover:underline">Delete</button></td>
+                              </tr>
+                            );
+                          })}
+                          {(data?.licenses ?? []).length === 0 && <tr><td colSpan={8} className="px-4 py-12 text-center text-muted">No licenses yet. <button onClick={() => setShowAddLicense(true)} className="text-gold hover:underline">Add the first one.</button></td></tr>}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* COMPLIANCE CALENDAR */}
+              {active === "Compliance Calendar" && (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <input value={moduleSearch["compliance"] ?? ""} onChange={e => setModuleSearch(p => ({ ...p, compliance: e.target.value }))} placeholder="Search compliance..." className={cn(inputClass, "flex-1 min-w-[160px]")} />
+                    <Button onClick={() => setShowAddCompliance(true)}><Plus size={16} /> Add Deadline</Button>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {(["pending","completed","overdue"] as const).map(st => (
+                      <div key={st} className="glass-panel rounded-lg p-4 shadow-soft">
+                        <p className="text-xs text-muted capitalize">{st}</p>
+                        <p className="mt-1 font-heading text-2xl font-bold text-heading">{(data?.compliance ?? []).filter((c: ComplianceRow) => c.status === st).length}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="glass-panel rounded-lg shadow-soft">
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[580px] text-sm">
+                        <thead className="bg-panel"><tr>{["Client","Type","Due Date","Days Left","Status","Notes",""].map(h => <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">{h}</th>)}</tr></thead>
+                        <tbody className="divide-y divide-edge">
+                          {searchFilter(data?.compliance ?? [], "compliance", ["type","status","notes","client.name"]).map((c: ComplianceRow) => {
+                            const d = daysLeft(c.dueDate);
+                            return (
+                              <tr key={c.id} className="transition hover:bg-panel/60">
+                                <td className="px-4 py-3 font-medium text-heading">{c.client?.name ?? "—"}</td>
+                                <td className="px-4 py-3"><span className="rounded bg-navy/10 px-2 py-0.5 text-xs font-semibold text-heading">{c.type}</span></td>
+                                <td className="px-4 py-3 text-muted">{new Date(c.dueDate).toLocaleDateString()}</td>
+                                <td className="px-4 py-3">{c.status !== "completed" ? expiryBadge(d) : <span className="text-xs text-muted">—</span>}</td>
+                                <td className="px-4 py-3">
+                                  <select value={c.status} onChange={async e => { await fetch(`/api/admin/compliance/${c.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: e.target.value }) }); fetchData(); }} className="rounded border border-edge bg-base px-2 py-1 text-xs text-heading focus:border-gold focus:outline-none">
+                                    <option value="pending">pending</option><option value="completed">completed</option><option value="overdue">overdue</option>
+                                  </select>
+                                </td>
+                                <td className="px-4 py-3 text-muted text-xs max-w-[140px] truncate">{c.notes || "—"}</td>
+                                <td className="px-4 py-3 text-right"><button onClick={() => deleteRecord(`/api/admin/compliance/${c.id}`)} className="text-xs text-red-400 hover:underline">Delete</button></td>
+                              </tr>
+                            );
+                          })}
+                          {(data?.compliance ?? []).length === 0 && <tr><td colSpan={7} className="px-4 py-12 text-center text-muted">No deadlines yet. <button onClick={() => setShowAddCompliance(true)} className="text-gold hover:underline">Add the first one.</button></td></tr>}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* DOCUMENTS */}
+              {active === "Documents" && (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <input value={moduleSearch["docs"] ?? ""} onChange={e => setModuleSearch(p => ({ ...p, docs: e.target.value }))} placeholder="Search documents..." className={cn(inputClass, "flex-1 min-w-[160px]")} />
+                    <Button onClick={() => setShowAddDocument(true)}><Plus size={16} /> Add Document</Button>
+                  </div>
+                  <div className="glass-panel rounded-lg shadow-soft">
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[620px] text-sm">
+                        <thead className="bg-panel"><tr>{["Client","Document","Type","Expires","Days Left","Link",""].map(h => <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">{h}</th>)}</tr></thead>
+                        <tbody className="divide-y divide-edge">
+                          {searchFilter(data?.documents ?? [], "docs", ["name","type","client.name"]).map((d: DocumentRow) => {
+                            const dl = daysLeft(d.expiryDate);
+                            return (
+                              <tr key={d.id} className="transition hover:bg-panel/60">
+                                <td className="px-4 py-3 font-medium text-heading">{d.client?.name ?? "—"}</td>
+                                <td className="px-4 py-3 text-heading">{d.name}</td>
+                                <td className="px-4 py-3"><span className="rounded bg-panel px-2 py-0.5 text-xs text-muted capitalize">{d.type}</span></td>
+                                <td className="px-4 py-3 text-muted">{d.expiryDate ? new Date(d.expiryDate).toLocaleDateString() : "—"}</td>
+                                <td className="px-4 py-3">{dl !== null ? expiryBadge(dl) : <span className="text-xs text-muted">—</span>}</td>
+                                <td className="px-4 py-3">{d.fileUrl ? <a href={d.fileUrl} target="_blank" rel="noreferrer" className="text-gold text-xs hover:underline">Open</a> : "—"}</td>
+                                <td className="px-4 py-3 text-right"><button onClick={() => deleteRecord(`/api/admin/documents/${d.id}`)} className="text-xs text-red-400 hover:underline">Delete</button></td>
+                              </tr>
+                            );
+                          })}
+                          {(data?.documents ?? []).length === 0 && <tr><td colSpan={7} className="px-4 py-12 text-center text-muted">No documents yet. <button onClick={() => setShowAddDocument(true)} className="text-gold hover:underline">Add the first one.</button></td></tr>}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STAFF & PERFORMANCE */}
+              {active === "Staff & Performance" && (
+                <div className="space-y-6">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <input value={moduleSearch["staff"] ?? ""} onChange={e => setModuleSearch(p => ({ ...p, staff: e.target.value }))} placeholder="Search staff..." className={cn(inputClass, "flex-1 min-w-[160px]")} />
+                    <Button onClick={() => setShowAddStaff(true)}><Plus size={16} /> Add Staff</Button>
+                  </div>
+                  <div className="glass-panel rounded-lg shadow-soft">
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[460px] text-sm">
+                        <thead className="bg-panel"><tr>{["Name","Email","Role","Active","Tasks",""].map(h => <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">{h}</th>)}</tr></thead>
+                        <tbody className="divide-y divide-edge">
+                          {searchFilter(data?.staff ?? [], "staff", ["name","email","role"]).map((s: StaffRow) => {
+                            const taskCount = (data?.services ?? []).filter((sr: ServiceRow) => sr.assignedTo === s.name).length;
+                            return (
+                              <tr key={s.id} className="transition hover:bg-panel/60">
+                                <td className="px-4 py-3 font-medium text-heading">{s.name}</td>
+                                <td className="px-4 py-3 text-muted">{s.email}</td>
+                                <td className="px-4 py-3"><span className={cn("text-xs px-2 py-0.5 rounded-full capitalize", s.role === "admin" ? "bg-gold/15 text-gold" : s.role === "manager" ? "bg-blue-500/15 text-blue-300" : "bg-panel text-muted")}>{s.role}</span></td>
+                                <td className="px-4 py-3">
+                                  <button onClick={() => toggleStaffActive(s.id, !s.active)} className={cn("text-xs px-2 py-0.5 rounded-full transition hover:opacity-80", s.active ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300")}>
+                                    {s.active ? "Active" : "Inactive"}
+                                  </button>
+                                </td>
+                                <td className="px-4 py-3 text-body">{taskCount}</td>
+                                <td className="px-4 py-3 text-right"><button onClick={() => deleteRecord(`/api/admin/staff/${s.id}`)} className="text-xs text-red-400 hover:underline">Delete</button></td>
+                              </tr>
+                            );
+                          })}
+                          {(data?.staff ?? []).length === 0 && <tr><td colSpan={6} className="px-4 py-12 text-center text-muted">No staff yet. <button onClick={() => setShowAddStaff(true)} className="text-gold hover:underline">Add the first member.</button></td></tr>}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  {data && productivity.length > 0 && (
+                    <div className="glass-panel rounded-lg p-5 shadow-soft sm:p-6">
+                      <h3 className="font-heading font-semibold text-heading text-lg mb-2">Staff Productivity</h3>
+                      <StaffProductivityChart data={productivity} />
+                    </div>
+                  )}
+                </div>
+              )}
 
               {placeholders.includes(active) && <div className="glass-panel rounded-lg p-8 text-center shadow-soft"><p className="text-muted text-lg">Coming Soon</p><p className="text-muted/70 text-sm mt-2">Database schema ready. Next phase build.</p></div>}
 
