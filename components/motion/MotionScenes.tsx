@@ -172,11 +172,15 @@ export function CardTilt({ children }: { children: ReactNode }) {
 
 export function TypingText({ text, className, startDelay = 0 }: { text: string; className?: string; startDelay?: number }) {
   const [display, setDisplay] = useState("");
+  const [done, setDone] = useState(false);
 
   useEffect(() => {
+    setDisplay("");
+    setDone(false);
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReducedMotion) {
       setDisplay(text);
+      setDone(true);
       return;
     }
     let index = 0;
@@ -185,7 +189,10 @@ export function TypingText({ text, className, startDelay = 0 }: { text: string; 
       intervalId = setInterval(() => {
         index += 1;
         setDisplay(text.slice(0, index));
-        if (index >= text.length) clearInterval(intervalId);
+        if (index >= text.length) {
+          clearInterval(intervalId);
+          setDone(true);
+        }
       }, 70);
     }, startDelay);
     return () => {
@@ -197,12 +204,14 @@ export function TypingText({ text, className, startDelay = 0 }: { text: string; 
   return (
     <span className={className}>
       {display}
-      <motion.span
-        className="ml-0.5 inline-block h-[0.85em] w-[2px] translate-y-[0.1em] bg-gold align-middle"
-        animate={{ opacity: [1, 1, 0, 0] }}
-        transition={{ duration: 0.9, repeat: Infinity, times: [0, 0.5, 0.5, 1] }}
-        aria-hidden="true"
-      />
+      {!done && (
+        <motion.span
+          className="ml-0.5 inline-block h-[0.85em] w-[2px] translate-y-[0.1em] bg-gold align-middle"
+          animate={{ opacity: [1, 1, 0, 0] }}
+          transition={{ duration: 0.9, repeat: Infinity, times: [0, 0.5, 0.5, 1] }}
+          aria-hidden="true"
+        />
+      )}
     </span>
   );
 }

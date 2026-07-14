@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Bot, ChevronUp, Clock, Menu, Phone, Send, X } from "lucide-react";
+import { Bot, ChevronUp, Clock, MapPin, Menu, Phone, Send, X } from "lucide-react";
 import { Button } from "@/components/Button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { company } from "@/lib/company";
@@ -83,7 +83,11 @@ export function Footer() {
       <div className="section-shell grid gap-10 py-12 md:grid-cols-3">
         <div>
           <h2 className="font-heading text-xl font-semibold">{company.name}</h2>
-          <div className="mt-5 flex flex-wrap gap-3">
+          <p className="mt-3 flex items-start gap-2 text-sm text-white/75">
+            <MapPin size={15} className="mt-0.5 shrink-0 text-gold" />
+            {company.address}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
             {Object.entries(company.social).map(([label, href]) => (
               <a key={label} href={href} target="_blank" rel="noreferrer" className="rounded-md border border-white/15 px-3 py-2 text-xs font-semibold text-white/80 transition hover:border-gold hover:text-gold">
                 {label}
