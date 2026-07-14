@@ -7,25 +7,27 @@ services:
         NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_jshGnyOjWqN1qFPYIEWn_A_v4hzS45S
     restart: unless-stopped
     environment:
+      MAIN_DOMAIN: ${MAIN_DOMAIN:-professionalbusines.com}
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN:-admin.professionalbusines.com}
       NEXT_PUBLIC_SUPABASE_URL: https://bvaykkygqxbbrfxbnyhv.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_jshGnyOjWqN1qFPYIEWn_A_v4hzS45S
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.pro-main.rule=Host(`pro.aiinvention.tech`)"
+      - "traefik.http.routers.pro-main.rule=Host(`professionalbusines.com`)"
       - "traefik.http.routers.pro-main.entrypoints=websecure"
       - "traefik.http.routers.pro-main.tls.certresolver=letsencrypt"
       - "traefik.http.routers.pro-main.service=pro-main"
       - "traefik.http.services.pro-main.loadbalancer.server.port=3000"
-      - "traefik.http.routers.pro-admin.rule=Host(`admin-pro.aiinvention.tech`)"
+      - "traefik.http.routers.pro-admin.rule=Host(`admin.professionalbusines.com`)"
       - "traefik.http.routers.pro-admin.entrypoints=websecure"
       - "traefik.http.routers.pro-admin.tls.certresolver=letsencrypt"
       - "traefik.http.routers.pro-admin.service=pro-admin"
       - "traefik.http.services.pro-admin.loadbalancer.server.port=3000"
     networks:
-      - ai-invention_default
+      - traefik-net
 
 networks:
-  ai-invention_default:
+  traefik-net:
     external: true

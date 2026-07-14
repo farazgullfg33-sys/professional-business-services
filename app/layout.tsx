@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "sw
 const playfair = Playfair_Display({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-playfair", display: "swap" });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://pro.aiinvention.tech"),
+  metadataBase: new URL("https://professionalbusines.com"),
   title: {
     default: "Professional Business Services | PRO Services in UAE",
     template: "%s | Professional Business Services"

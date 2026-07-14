@@ -5,10 +5,11 @@ export async function middleware(request: NextRequest) {
   const hostname = request.headers.get("host") || "";
   const pathname = request.nextUrl.pathname;
 
-  // Determine base response first — rewrite for admin-pro subdomain, passthrough otherwise
+  // Determine base response first — rewrite for admin subdomain, passthrough otherwise
+  const adminDomain = process.env.ADMIN_DOMAIN || "admin.professionalbusines.com";
   let response: NextResponse;
   if (
-    hostname.includes("admin-pro") &&
+    (hostname === adminDomain || hostname.includes("admin-pro")) &&
     !pathname.startsWith("/admin") &&
     !pathname.startsWith("/api")
   ) {

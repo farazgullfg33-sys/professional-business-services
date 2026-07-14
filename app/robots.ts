@@ -5,6 +5,6 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       { userAgent: "*", allow: "/", disallow: ["/admin", "/api"] }
     ],
-    sitemap: "https://pro.aiinvention.tech/sitemap.xml"
+    sitemap: "https://professionalbusines.com/sitemap.xml"
   };
 }

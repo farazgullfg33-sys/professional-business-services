@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { blogPosts } from "@/lib/blog";
 
-const baseUrl = "https://pro.aiinvention.tech";
+const baseUrl = "https://professionalbusines.com";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes = [

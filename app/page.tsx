@@ -48,7 +48,7 @@ export default function HomePage() {
     telephone: company.phone,
     address: { "@type": "PostalAddress", streetAddress: company.address, addressCountry: "AE" },
     areaServed: "Abu Dhabi, United Arab Emirates",
-    url: "https://pro.aiinvention.tech",
+    url: "https://professionalbusines.com",
     sameAs: Object.values(company.social)
   };
 
