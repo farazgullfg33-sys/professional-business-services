@@ -2,6 +2,25 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+// Supabase returns PromiseLike (PostgrestFilterBuilder), not Promise — use PromiseLike here
+async function safeData(query: () => PromiseLike<{ data: unknown[] | null; error: unknown }>): Promise<unknown[]> {
+  try {
+    const { data } = await query();
+    return data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+async function safeCount(query: () => PromiseLike<{ count: number | null; error: unknown }>): Promise<number> {
+  try {
+    const { count } = await query();
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 export async function GET() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -9,52 +28,29 @@ export async function GET() {
 
   const db = createAdminClient();
 
-  const [
-    { data: clients },
-    { data: leads },
-    { data: contacts },
-    { data: quoteReqs },
-    { data: services },
-    { data: followUps },
-    { data: quotesList },
-    { data: invoices },
-    { data: documents }
-  ] = await Promise.all([
-    db.from("Client").select("*").order("createdAt", { ascending: false }).limit(50),
-    db.from("Lead").select("*").order("createdAt", { ascending: false }).limit(50),
-    db.from("ContactSubmission").select("*").order("createdAt", { ascending: false }).limit(50),
-    db.from("QuoteRequest").select("*").order("createdAt", { ascending: false }).limit(50),
-    db.from("ServiceRequest").select("*, Client(name)").order("createdAt", { ascending: false }).limit(50),
-    db.from("FollowUp").select("*, Client(name)").order("dueDate", { ascending: true }).limit(50),
-    db.from("Quote").select("*, Client(name, company)").order("createdAt", { ascending: false }).limit(50),
-    db.from("Invoice").select("*, Quote(*, Client(name))").order("createdAt", { ascending: false }).limit(50),
-    db.from("Document").select("*, Client(name)").not("expiryDate", "is", null).order("expiryDate", { ascending: true }).limit(50)
+  const [clients, leads, contacts, quoteReqs, services, followUps, quotesList, invoices, documents] = await Promise.all([
+    safeData(() => db.from("Client").select("*").order("createdAt", { ascending: false }).limit(50)),
+    safeData(() => db.from("Lead").select("*").order("createdAt", { ascending: false }).limit(50)),
+    safeData(() => db.from("ContactSubmission").select("*").order("createdAt", { ascending: false }).limit(50)),
+    safeData(() => db.from("QuoteRequest").select("*").order("createdAt", { ascending: false }).limit(50)),
+    safeData(() => db.from("ServiceRequest").select("*, Client(name)").order("createdAt", { ascending: false }).limit(50)),
+    safeData(() => db.from("FollowUp").select("*, Client(name)").order("dueDate", { ascending: true }).limit(50)),
+    safeData(() => db.from("Quote").select("*, Client(name, company)").order("createdAt", { ascending: false }).limit(50)),
+    safeData(() => db.from("Invoice").select("*, Quote(*, Client(name))").order("createdAt", { ascending: false }).limit(50)),
+    safeData(() => db.from("Document").select("*, Client(name)").not("expiryDate", "is", null).order("expiryDate", { ascending: true }).limit(50)),
   ]);
 
-  const [
-    { count: clientCount },
-    { count: leadCount },
-    { count: contactCount },
-    { count: quoteReqCount },
-    { count: serviceCount },
-    { count: followUpCount }
-  ] = await Promise.all([
-    db.from("Client").select("*", { count: "exact", head: true }),
-    db.from("Lead").select("*", { count: "exact", head: true }),
-    db.from("ContactSubmission").select("*", { count: "exact", head: true }),
-    db.from("QuoteRequest").select("*", { count: "exact", head: true }),
-    db.from("ServiceRequest").select("*", { count: "exact", head: true }),
-    db.from("FollowUp").select("*", { count: "exact", head: true })
+  const [clientCount, leadCount, contactCount, quoteReqCount, serviceCount, followUpCount] = await Promise.all([
+    safeCount(() => db.from("Client").select("*", { count: "exact", head: true })),
+    safeCount(() => db.from("Lead").select("*", { count: "exact", head: true })),
+    safeCount(() => db.from("ContactSubmission").select("*", { count: "exact", head: true })),
+    safeCount(() => db.from("QuoteRequest").select("*", { count: "exact", head: true })),
+    safeCount(() => db.from("ServiceRequest").select("*", { count: "exact", head: true })),
+    safeCount(() => db.from("FollowUp").select("*", { count: "exact", head: true })),
   ]);
 
-  const counts = {
-    clients: clientCount ?? 0,
-    leads: leadCount ?? 0,
-    contacts: contactCount ?? 0,
-    quoteReqs: quoteReqCount ?? 0,
-    services: serviceCount ?? 0,
-    followUps: followUpCount ?? 0
-  };
-
-  return NextResponse.json({ counts, clients, leads, contacts, quoteReqs, services, followUps, quotesList, invoices, documents });
+  return NextResponse.json({
+    counts: { clients: clientCount, leads: leadCount, contacts: contactCount, quoteReqs: quoteReqCount, services: serviceCount, followUps: followUpCount },
+    clients, leads, contacts, quoteReqs, services, followUps, quotesList, invoices, documents
+  });
 }
