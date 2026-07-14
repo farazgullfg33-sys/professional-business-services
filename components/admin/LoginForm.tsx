@@ -22,8 +22,8 @@ export function LoginForm() {
         <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-md border border-gold/40 bg-gold/15 text-gold">
           <LockKeyhole />
         </div>
-        <h1 className="font-heading text-3xl font-semibold text-heading">Staff Login</h1>
-        <p className="mt-2 text-sm text-muted">Use seeded credentials such as admin@professionalbs.local / Password123!</p>
+        <h1 className="font-heading text-3xl font-semibold text-heading">CEO Login</h1>
+        <p className="mt-2 text-sm text-muted">badshahdeking@gmail.com</p>
         <form
           className="mt-6 space-y-4"
           onSubmit={async (event) => {
