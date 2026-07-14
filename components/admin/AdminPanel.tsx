@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { signOut } from "next-auth/react";
+import { createClient } from "@/lib/supabase/client";
 import {
   AlertTriangle, BarChart3, CalendarDays, CheckSquare, ClipboardList, Download, FileArchive, FileBadge,
   FileText, FolderOpen, GripVertical, LayoutDashboard, LogOut, Menu, MessageSquareText, Plus, ReceiptText,
@@ -240,7 +240,7 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
               <Button onClick={()=>setShowNewClient(true)}><Plus size={16}/> New Client</Button>
               <Button variant="outline" onClick={()=>{setShowNewQuote(true);setActive("Quotes & Invoices");}}><FileText size={16}/> New Quote</Button>
               <Button variant="outline" onClick={exportCSV}><Download size={16}/> Export</Button>
-              <Button variant="ghost" onClick={()=>signOut({callbackUrl:"/admin"})}><LogOut size={16}/></Button>
+              <Button variant="ghost" onClick={async()=>{ await createClient().auth.signOut(); window.location.href="/admin/login"; }}><LogOut size={16}/></Button>
             </div>
           </div>
 
