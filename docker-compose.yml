@@ -1,28 +1,16 @@
 services:
-  pro-db:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: professionalbs
-      POSTGRES_USER: professionalbs
-      POSTGRES_PASSWORD: professionalbs
-    volumes:
-      - pro_postgres_data:/var/lib/postgresql/data
-
   web:
-    build: .
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: https://bvaykkygqxbbrfxbnyhv.supabase.co
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_jshGnyOjWqN1qFPYIEWn_A_v4hzS45S
     restart: unless-stopped
-    depends_on:
-      - pro-db
     environment:
-      DATABASE_URL: ${DATABASE_URL}
-      NEXTAUTH_URL: ${NEXTAUTH_URL}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXT_PUBLIC_SUPABASE_URL: https://bvaykkygqxbbrfxbnyhv.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_jshGnyOjWqN1qFPYIEWn_A_v4hzS45S
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
-      WHATSAPP_TOKEN: ${WHATSAPP_TOKEN}
-      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID}
-      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.pro-main.rule=Host(`pro.aiinvention.tech`)"
@@ -36,12 +24,8 @@ services:
       - "traefik.http.routers.pro-admin.service=pro-admin"
       - "traefik.http.services.pro-admin.loadbalancer.server.port=3000"
     networks:
-      - default
       - ai-invention_default
 
 networks:
   ai-invention_default:
     external: true
-
-volumes:
-  pro_postgres_data:
