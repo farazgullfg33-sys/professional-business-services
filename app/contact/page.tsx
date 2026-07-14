@@ -1,8 +1,14 @@
+import dynamic from "next/dynamic";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { ContactForm } from "@/components/ContactForm";
 import { SectionHeading } from "@/components/SectionHeading";
 import { Reveal } from "@/components/motion/MotionScenes";
 import { company } from "@/lib/company";
+
+const ParticleField = dynamic(
+  () => import("@/components/3d/ParticleField").then((m) => m.ParticleField),
+  { ssr: false }
+);
 
 export const metadata = {
   title: "Contact",
@@ -12,8 +18,9 @@ export const metadata = {
 export default function ContactPage() {
   return (
     <main>
-      <section className="bg-panel py-20">
-        <div className="section-shell grid gap-12 lg:grid-cols-[0.9fr_1.1fr]">
+      <section className="relative overflow-hidden bg-panel py-20">
+        <ParticleField className="absolute inset-0 opacity-40" />
+        <div className="section-shell relative z-10 grid gap-12 lg:grid-cols-[0.9fr_1.1fr]">
           <Reveal x={-16} y={0}>
             <SectionHeading title="Contact Professional Business Services" copy="Reach the Abu Dhabi office for consultation, document review, quote requests, or urgent PRO follow-up." />
             <div className="mt-8 space-y-4">
