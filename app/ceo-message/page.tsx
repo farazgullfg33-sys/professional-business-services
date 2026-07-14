@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { GlowOrb, ParallaxWrap, Reveal, TypingText } from "@/components/motion/MotionScenes";
 import { ceoMessage } from "@/lib/company";
 
@@ -25,8 +26,15 @@ export default function CEOMessagePage() {
         <ParallaxWrap offset={24}>
           <Reveal x={16} y={0} delay={0.15}>
             <div className="rounded-lg border-4 border-gold bg-surface p-5 shadow-soft">
-              <div className="flex aspect-[4/5] items-center justify-center rounded-md bg-panel text-center text-lg font-semibold text-heading">
-                CEO Photo Placeholder
+              <div className="relative aspect-[4/5] overflow-hidden rounded-md">
+                <Image
+                  src="/ceo-waqas.jpeg"
+                  alt="Muhammad Waqas — CEO, Professional Business Services"
+                  fill
+                  className="object-cover object-top"
+                  sizes="(max-width: 768px) 100vw, 420px"
+                  priority
+                />
               </div>
             </div>
           </Reveal>

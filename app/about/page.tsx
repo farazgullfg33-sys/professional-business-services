@@ -1,4 +1,5 @@
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { MapPin } from "lucide-react";
 import { SectionHeading } from "@/components/SectionHeading";
 import { ParallaxWrap, Reveal, TimelineMotion } from "@/components/motion/MotionScenes";
@@ -33,8 +34,15 @@ export default function AboutPage() {
           <ParallaxWrap offset={24}>
             <Reveal x={-16} y={0}>
               <div className="rounded-lg border-4 border-gold bg-surface p-5 shadow-soft">
-                <div className="flex aspect-[4/5] items-center justify-center rounded-md bg-panel text-center text-lg font-semibold text-heading">
-                  CEO Photo Placeholder
+                <div className="relative aspect-[4/5] overflow-hidden rounded-md">
+                  <Image
+                    src="/ceo-waqas.jpeg"
+                    alt="Muhammad Waqas — CEO, Professional Business Services"
+                    fill
+                    className="object-cover object-top"
+                    sizes="(max-width: 768px) 100vw, 400px"
+                    priority
+                  />
                 </div>
               </div>
             </Reveal>
@@ -55,8 +63,14 @@ export default function AboutPage() {
             <ParallaxWrap offset={24}>
               <Reveal x={-16} y={0}>
                 <div className="rounded-lg border-4 border-gold bg-surface p-5 shadow-soft">
-                  <div className="flex aspect-[4/5] items-center justify-center rounded-md bg-panel text-center text-lg font-semibold text-heading">
-                    Muhammad Waqas — Photo Placeholder
+                  <div className="relative aspect-[4/5] overflow-hidden rounded-md">
+                    <Image
+                      src="/ceo-waqas.jpeg"
+                      alt="Muhammad Waqas — CEO, Professional Business Services"
+                      fill
+                      className="object-cover object-top"
+                      sizes="(max-width: 768px) 100vw, 400px"
+                    />
                   </div>
                 </div>
               </Reveal>
