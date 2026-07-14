@@ -28,6 +28,8 @@ type LicenseRow = { id: string; licenseNumber?: string; type?: string; issueDate
 type FormationRow = { id: string; clientId: string; step: number; name: string; completed: boolean; client: { name: string } };
 type ComplianceRow = { id: string; type: string; dueDate: string; status: string; notes?: string; client: { name: string } };
 type StaffRow = { id: string; name: string; email: string; role: string; active: boolean };
+type AttestationRow = { id: string; clientId: string; documentName: string; documentType?: string; checkpoint: string; status: string; notes?: string; createdAt: string; client: { name: string } };
+type CommLogRow = { id: string; type: string; staffName: string; summary: string; outcome?: string; createdAt: string; client: { name: string } };
 
 const pipelineColumns = [
   { key: "new", label: "New", dot: "bg-blue-400" },
@@ -58,7 +60,16 @@ const urls = ["https://www.tamm.abudhabi","https://www.mohre.gov.ae","https://ic
 
 const bizTypes = ["trade","tech","consulting","holding","media","services","other"];
 const sources = ["direct","website","referral","walk-in","social","call"];
-const placeholders = ["Attestation Pipeline", "Communication Log"];
+const placeholders: string[] = []; // all modules built
+
+const ATTESTATION_CHECKPOINTS = ["original_received","notary","mofa","embassy","delivered"] as const;
+const CHECKPOINT_LABEL: Record<string, string> = {
+  original_received: "Original Received",
+  notary: "Notary",
+  mofa: "MOFA",
+  embassy: "Embassy",
+  delivered: "Delivered",
+};
 
 const inputClass = "rounded-md border border-edge bg-base px-3 py-2 text-sm text-heading placeholder:text-muted focus:border-gold focus:outline-none";
 
@@ -111,6 +122,9 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
   const [showAddStaff, setShowAddStaff] = useState(false);
   const [formationClientId, setFormationClientId] = useState("");
   const [moduleSearch, setModuleSearch] = useState<Record<string, string>>({});
+  const [showAddAttestation, setShowAddAttestation] = useState(false);
+  const [showAddCommLog, setShowAddCommLog] = useState(false);
+  const [commLogTypeFilter, setCommLogTypeFilter] = useState("all");
 
   const fetchData = () => {
     setLoading(true);
@@ -189,6 +203,24 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
     if (!confirm("Delete this record? This cannot be undone.")) return;
     const r = await fetch(endpoint, { method: "DELETE" });
     if (r.ok) fetchData();
+  };
+
+  const advanceCheckpoint = async (row: AttestationRow) => {
+    const idx = ATTESTATION_CHECKPOINTS.indexOf(row.checkpoint as typeof ATTESTATION_CHECKPOINTS[number]);
+    if (idx === -1 || idx >= ATTESTATION_CHECKPOINTS.length - 1) return;
+    const next = ATTESTATION_CHECKPOINTS[idx + 1];
+    const isLast = idx + 1 === ATTESTATION_CHECKPOINTS.length - 1;
+    setData((prev: any) => prev ? {
+      ...prev,
+      attestations: prev.attestations?.map((a: AttestationRow) =>
+        a.id === row.id ? { ...a, checkpoint: next, status: isLast ? "completed" : "in_progress" } : a
+      )
+    } : prev);
+    await fetch(`/api/admin/attestation/${row.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ checkpoint: next, status: isLast ? "completed" : "in_progress" }),
+    });
   };
 
   const searchFilter = (items: any[], key: string, fields: string[]) => {
@@ -426,6 +458,41 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
                   <input name="fileUrl" placeholder="File URL (Drive / OneDrive / Dropbox link) *" className={inputClass} required />
                   <div><label className="text-xs text-muted">Expiry Date (optional)</label><input name="expiryDate" type="date" className={cn(inputClass, "mt-1 w-full")} /></div>
                   <Button type="submit">Add Document</Button>
+                </form>
+              </motion.div>
+            </div>
+          )}
+
+          {/* ADD ATTESTATION MODAL */}
+          {showAddAttestation && data && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowAddAttestation(false)}>
+              <motion.div initial={{ opacity: 0, y: 12, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} className="glass-panel w-full max-w-lg mx-4 rounded-lg p-6 shadow-soft" onClick={e => e.stopPropagation()}>
+                <h3 className="text-xl font-heading font-bold text-heading mb-4">Start Attestation</h3>
+                <form className="grid gap-3" onSubmit={e => postForm("/api/admin/attestation", e, () => setShowAddAttestation(false))}>
+                  <select name="clientId" className={inputClass} required><option value="">Select Client *</option>{data.clients?.map((c: any) => <option key={c.id} value={c.id}>{c.name}{c.company ? ` (${c.company})` : ""}</option>)}</select>
+                  <input name="documentName" placeholder="Document Name *" className={inputClass} required />
+                  <select name="documentType" className={inputClass}><option value="">Document Category</option><option value="educational">Educational</option><option value="commercial">Commercial</option><option value="personal">Personal</option><option value="marriage">Marriage</option><option value="birth">Birth Certificate</option></select>
+                  <textarea name="notes" placeholder="Notes (optional)" className={cn(inputClass, "h-16")} />
+                  <Button type="submit">Start Attestation</Button>
+                </form>
+              </motion.div>
+            </div>
+          )}
+
+          {/* ADD COMM LOG MODAL */}
+          {showAddCommLog && data && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowAddCommLog(false)}>
+              <motion.div initial={{ opacity: 0, y: 12, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} className="glass-panel w-full max-w-lg mx-4 rounded-lg p-6 shadow-soft" onClick={e => e.stopPropagation()}>
+                <h3 className="text-xl font-heading font-bold text-heading mb-4">Log Communication</h3>
+                <form className="grid gap-3" onSubmit={e => postForm("/api/admin/commlog", e, () => setShowAddCommLog(false))}>
+                  <select name="clientId" className={inputClass} required><option value="">Select Client *</option>{data.clients?.map((c: any) => <option key={c.id} value={c.id}>{c.name}{c.company ? ` (${c.company})` : ""}</option>)}</select>
+                  <div className="grid grid-cols-2 gap-3">
+                    <select name="type" className={inputClass} required><option value="">Type *</option><option value="call">Call</option><option value="email">Email</option><option value="visit">Visit</option><option value="whatsapp">WhatsApp</option></select>
+                    <input name="staffName" placeholder="Staff Name *" className={inputClass} required />
+                  </div>
+                  <textarea name="summary" placeholder="Summary / What was discussed *" className={cn(inputClass, "h-20")} required />
+                  <textarea name="outcome" placeholder="Outcome / Next action (optional)" className={cn(inputClass, "h-16")} />
+                  <Button type="submit">Log Communication</Button>
                 </form>
               </motion.div>
             </div>
@@ -905,6 +972,154 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
                       <StaffProductivityChart data={productivity} />
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* ATTESTATION PIPELINE */}
+              {active === "Attestation Pipeline" && (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <input value={moduleSearch["attest"] ?? ""} onChange={e => setModuleSearch(p => ({ ...p, attest: e.target.value }))} placeholder="Search documents..." className={cn(inputClass, "flex-1 min-w-[160px]")} />
+                    <Button onClick={() => setShowAddAttestation(true)}><Plus size={16} /> Start Attestation</Button>
+                  </div>
+
+                  {/* summary counts */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {(["in_progress","completed","on_hold"] as const).map(st => (
+                      <div key={st} className="glass-panel rounded-lg p-4 shadow-soft">
+                        <p className="text-xs text-muted capitalize">{st.replace("_"," ")}</p>
+                        <p className="mt-1 font-heading text-2xl font-bold text-heading">{(data?.attestations ?? []).filter((a: AttestationRow) => a.status === st).length}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* cards */}
+                  <div className="space-y-3">
+                    {searchFilter(data?.attestations ?? [], "attest", ["documentName","documentType","client.name"]).map((a: AttestationRow) => {
+                      const cpIdx = ATTESTATION_CHECKPOINTS.indexOf(a.checkpoint as typeof ATTESTATION_CHECKPOINTS[number]);
+                      const isLast = cpIdx === ATTESTATION_CHECKPOINTS.length - 1;
+                      return (
+                        <div key={a.id} className="glass-panel rounded-lg p-5 shadow-soft">
+                          <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+                            <div>
+                              <p className="font-heading font-semibold text-heading">{a.documentName}</p>
+                              <p className="text-xs text-muted mt-0.5">{a.client?.name ?? "—"}{a.documentType ? ` · ${a.documentType}` : ""}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {statusBadge(a.status)}
+                              {!isLast && a.status !== "on_hold" && (
+                                <button onClick={() => advanceCheckpoint(a)} className="inline-flex items-center gap-1 rounded-md border border-gold/40 bg-gold/10 px-2.5 py-1 text-xs font-semibold text-gold hover:bg-gold/20 transition">
+                                  Next Step →
+                                </button>
+                              )}
+                              <select
+                                value={a.status}
+                                onChange={async e => { await fetch(`/api/admin/attestation/${a.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: e.target.value }) }); fetchData(); }}
+                                className="rounded border border-edge bg-base px-2 py-1 text-xs text-heading focus:border-gold focus:outline-none"
+                              >
+                                <option value="in_progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                                <option value="on_hold">On Hold</option>
+                              </select>
+                              <button onClick={() => deleteRecord(`/api/admin/attestation/${a.id}`)} className="text-xs text-red-400 hover:underline">Delete</button>
+                            </div>
+                          </div>
+
+                          {/* checkpoint pipeline */}
+                          <div className="flex items-center gap-0">
+                            {ATTESTATION_CHECKPOINTS.map((cp, i) => {
+                              const done = i < cpIdx;
+                              const current = i === cpIdx;
+                              return (
+                                <div key={cp} className="flex flex-1 items-center">
+                                  <div className="flex flex-col items-center flex-shrink-0">
+                                    <div className={cn(
+                                      "flex h-7 w-7 items-center justify-center rounded-full border-2 text-xs font-bold transition",
+                                      done ? "border-emerald-400 bg-emerald-400/20 text-emerald-300"
+                                           : current ? "border-gold bg-gold/20 text-gold"
+                                           : "border-edge bg-panel text-muted"
+                                    )}>
+                                      {done ? "✓" : i + 1}
+                                    </div>
+                                    <span className={cn("mt-1 text-center text-[10px] leading-tight max-w-[56px]", current ? "text-gold font-semibold" : done ? "text-emerald-300" : "text-muted")}>
+                                      {CHECKPOINT_LABEL[cp]}
+                                    </span>
+                                  </div>
+                                  {i < ATTESTATION_CHECKPOINTS.length - 1 && (
+                                    <div className={cn("flex-1 h-0.5 mx-1 mb-4 rounded-full", done ? "bg-emerald-400/50" : "bg-edge")} />
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {a.notes && <p className="mt-3 text-xs text-muted border-t border-edge pt-2">{a.notes}</p>}
+                        </div>
+                      );
+                    })}
+                    {(data?.attestations ?? []).length === 0 && (
+                      <div className="glass-panel rounded-lg p-10 text-center shadow-soft">
+                        <p className="text-muted">No attestation records yet.</p>
+                        <button onClick={() => setShowAddAttestation(true)} className="mt-2 text-gold text-sm hover:underline">Start the first one.</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* COMMUNICATION LOG */}
+              {active === "Communication Log" && (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <input value={moduleSearch["commlog"] ?? ""} onChange={e => setModuleSearch(p => ({ ...p, commlog: e.target.value }))} placeholder="Search communications..." className={cn(inputClass, "flex-1 min-w-[160px]")} />
+                    <Button onClick={() => setShowAddCommLog(true)}><Plus size={16} /> Log Communication</Button>
+                  </div>
+
+                  {/* type filter tabs */}
+                  <div className="flex flex-wrap gap-2">
+                    {["all","call","email","visit","whatsapp"].map(t => (
+                      <button key={t} onClick={() => setCommLogTypeFilter(t)} className={cn("rounded-full border px-3 py-1 text-xs font-semibold capitalize transition", commLogTypeFilter === t ? "border-gold bg-gold/15 text-gold" : "border-edge text-muted hover:border-gold/50 hover:text-body")}>
+                        {t === "all" ? "All" : t === "call" ? "📞 Call" : t === "email" ? "✉️ Email" : t === "visit" ? "🏢 Visit" : "💬 WhatsApp"}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="glass-panel rounded-lg shadow-soft">
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[620px] text-sm">
+                        <thead className="bg-panel"><tr>{["Date","Client","Type","Summary","Outcome","Staff",""].map(h => <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">{h}</th>)}</tr></thead>
+                        <tbody className="divide-y divide-edge">
+                          {searchFilter(
+                            (data?.commlog ?? []).filter((l: CommLogRow) => commLogTypeFilter === "all" || l.type === commLogTypeFilter),
+                            "commlog",
+                            ["summary","outcome","staffName","client.name"]
+                          ).map((l: CommLogRow) => (
+                            <tr key={l.id} className="transition hover:bg-panel/60">
+                              <td className="px-4 py-3 text-muted whitespace-nowrap">{new Date(l.createdAt).toLocaleDateString()}</td>
+                              <td className="px-4 py-3 font-medium text-heading">{l.client?.name ?? "—"}</td>
+                              <td className="px-4 py-3">
+                                <span className={cn("text-xs px-2 py-0.5 rounded-full capitalize font-medium",
+                                  l.type === "call" ? "bg-blue-500/15 text-blue-300"
+                                  : l.type === "email" ? "bg-purple-500/15 text-purple-300"
+                                  : l.type === "visit" ? "bg-emerald-500/15 text-emerald-300"
+                                  : "bg-green-500/15 text-green-300"
+                                )}>
+                                  {l.type === "call" ? "📞" : l.type === "email" ? "✉️" : l.type === "visit" ? "🏢" : "💬"} {l.type}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-body max-w-[200px] truncate" title={l.summary}>{l.summary}</td>
+                              <td className="px-4 py-3 text-muted max-w-[160px] truncate text-xs" title={l.outcome ?? ""}>{l.outcome || "—"}</td>
+                              <td className="px-4 py-3 text-muted">{l.staffName}</td>
+                              <td className="px-4 py-3 text-right"><button onClick={() => deleteRecord(`/api/admin/commlog/${l.id}`)} className="text-xs text-red-400 hover:underline">Delete</button></td>
+                            </tr>
+                          ))}
+                          {(data?.commlog ?? []).filter((l: CommLogRow) => commLogTypeFilter === "all" || l.type === commLogTypeFilter).length === 0 && (
+                            <tr><td colSpan={7} className="px-4 py-12 text-center text-muted">No communications logged yet. <button onClick={() => setShowAddCommLog(true)} className="text-gold hover:underline">Log the first one.</button></td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               )}
 

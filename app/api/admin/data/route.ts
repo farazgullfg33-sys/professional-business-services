@@ -28,7 +28,7 @@ export async function GET() {
 
   const db = createAdminClient();
 
-  const [clients, leads, contacts, quoteReqs, services, followUps, quotesList, invoices, documents, visas, licenses, formation, compliance, staff] = await Promise.all([
+  const [clients, leads, contacts, quoteReqs, services, followUps, quotesList, invoices, documents, visas, licenses, formation, compliance, staff, attestations, commlog] = await Promise.all([
     safeData(() => db.from("Client").select("*").order("createdAt", { ascending: false }).limit(50)),
     safeData(() => db.from("Lead").select("*").order("createdAt", { ascending: false }).limit(50)),
     safeData(() => db.from("ContactSubmission").select("*").order("createdAt", { ascending: false }).limit(50)),
@@ -45,6 +45,8 @@ export async function GET() {
     safeData(() => db.from("FormationChecklist").select("*, client:Client(name)").order("clientId").order("step")),
     safeData(() => db.from("ComplianceDeadline").select("*, client:Client(name)").order("dueDate", { ascending: true }).limit(100)),
     safeData(() => db.from("Staff").select("id, name, email, role, active").order("name")),
+    safeData(() => db.from("Attestation").select("*, client:Client(name)").order("createdAt", { ascending: false }).limit(100)),
+    safeData(() => db.from("CommunicationLog").select("*, client:Client(name)").order("createdAt", { ascending: false }).limit(100)),
   ]);
 
   const [clientCount, leadCount, contactCount, quoteReqCount, serviceCount, followUpCount] = await Promise.all([
@@ -59,6 +61,6 @@ export async function GET() {
   return NextResponse.json({
     counts: { clients: clientCount, leads: leadCount, contacts: contactCount, quoteReqs: quoteReqCount, services: serviceCount, followUps: followUpCount },
     clients, leads, contacts, quoteReqs, services, followUps, quotesList, invoices, documents,
-    visas, licenses, formation, compliance, staff,
+    visas, licenses, formation, compliance, staff, attestations, commlog,
   });
 }
