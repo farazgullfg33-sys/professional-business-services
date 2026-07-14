@@ -1,24 +1,29 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-  const invoice = await prisma.invoice.findUnique({ where: { id }, include: { quote: { include: { client: true } } } });
-  if (!invoice) return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+  const db = createAdminClient();
+  const { data: invoice, error } = await db
+    .from("Invoice")
+    .select("*, Quote(*, Client(*))")
+    .eq("id", id)
+    .single();
+
+  if (error || !invoice) return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
 
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const q = invoice.quote;
+  const q = invoice.Quote;
 
-  // Header
   doc.setFillColor(26, 58, 92);
   doc.rect(0, 0, 210, 30, "F");
   doc.setTextColor(236, 180, 1);
@@ -32,22 +37,19 @@ export async function GET(request: Request) {
   doc.setFontSize(8);
   doc.text("Abu Dhabi, UAE | info@proservices.ae | +971 50 123 4567", 105, 28, { align: "center" });
 
-  // INVOICE title
   doc.setTextColor(26, 58, 92);
   doc.setFontSize(16);
   doc.text("TAX INVOICE", 105, 42, { align: "center" });
   doc.line(20, 46, 190, 46);
 
-  // Client + Invoice details
   doc.setFontSize(11);
   doc.setTextColor(40, 40, 40);
-  doc.text(`Bill To: ${q.client.name}`, 20, 56);
-  if (q.client.company) doc.text(`Company: ${q.client.company}`, 20, 63);
+  doc.text(`Bill To: ${q.Client.name}`, 20, 56);
+  if (q.Client.company) doc.text(`Company: ${q.Client.company}`, 20, 63);
   doc.text(`Invoice #: INV-${invoice.id.slice(0, 8)}`, 140, 56);
   doc.text(`Date: ${new Date(invoice.createdAt).toLocaleDateString()}`, 140, 63);
   doc.text(`Status: ${invoice.status.toUpperCase()}`, 140, 70);
 
-  // Services
   let y = 82;
   doc.setFillColor(26, 58, 92);
   doc.rect(20, y, 170, 8, "F");
@@ -65,7 +67,6 @@ export async function GET(request: Request) {
     y += 8;
   });
 
-  // Total
   y += 4;
   doc.setDrawColor(200, 200, 200);
   doc.line(120, y, 190, y);
@@ -83,14 +84,12 @@ export async function GET(request: Request) {
   doc.text("TOTAL DUE:", 120, y, { align: "right" });
   doc.text(`AED ${invoice.amount.toFixed(2)}`, 185, y, { align: "right" });
 
-  // Payment info
   y += 14;
   doc.setTextColor(80, 80, 80);
   doc.setFontSize(9);
   doc.text("Payment Method: Bank Transfer", 20, y);
   if (invoice.paymentMethod) doc.text(`Method: ${invoice.paymentMethod}`, 20, y + 5);
 
-  // Footer
   doc.setTextColor(130, 130, 130);
   doc.setFontSize(8);
   doc.text("Thank you for your business!", 105, 280, { align: "center" });

@@ -1,31 +1,59 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [clients, leads, contacts, quoteReqs, services, followUps, quotesList, invoices, documents] = await Promise.all([
-    prisma.client.findMany({ orderBy: { createdAt: "desc" }, take: 50 }),
-    prisma.lead.findMany({ orderBy: { createdAt: "desc" }, take: 50 }),
-    prisma.contactSubmission.findMany({ orderBy: { createdAt: "desc" }, take: 50 }),
-    prisma.quoteRequest.findMany({ orderBy: { createdAt: "desc" }, take: 50 }),
-    prisma.serviceRequest.findMany({ orderBy: { createdAt: "desc" }, take: 50, include: { client: { select: { name: true } } } }),
-    prisma.followUp.findMany({ orderBy: { dueDate: "asc" }, take: 50, include: { client: { select: { name: true } } } }),
-    prisma.quote.findMany({ orderBy: { createdAt: "desc" }, take: 50, include: { client: { select: { name: true, company: true } } } }),
-    prisma.invoice.findMany({ orderBy: { createdAt: "desc" }, take: 50, include: { quote: { include: { client: { select: { name: true } } } } } }),
-    prisma.document.findMany({ where: { expiryDate: { not: null } }, orderBy: { expiryDate: "asc" }, take: 50, include: { client: { select: { name: true } } } })
+  const db = createAdminClient();
+
+  const [
+    { data: clients },
+    { data: leads },
+    { data: contacts },
+    { data: quoteReqs },
+    { data: services },
+    { data: followUps },
+    { data: quotesList },
+    { data: invoices },
+    { data: documents }
+  ] = await Promise.all([
+    db.from("Client").select("*").order("createdAt", { ascending: false }).limit(50),
+    db.from("Lead").select("*").order("createdAt", { ascending: false }).limit(50),
+    db.from("ContactSubmission").select("*").order("createdAt", { ascending: false }).limit(50),
+    db.from("QuoteRequest").select("*").order("createdAt", { ascending: false }).limit(50),
+    db.from("ServiceRequest").select("*, Client(name)").order("createdAt", { ascending: false }).limit(50),
+    db.from("FollowUp").select("*, Client(name)").order("dueDate", { ascending: true }).limit(50),
+    db.from("Quote").select("*, Client(name, company)").order("createdAt", { ascending: false }).limit(50),
+    db.from("Invoice").select("*, Quote(*, Client(name))").order("createdAt", { ascending: false }).limit(50),
+    db.from("Document").select("*, Client(name)").not("expiryDate", "is", null).order("expiryDate", { ascending: true }).limit(50)
+  ]);
+
+  const [
+    { count: clientCount },
+    { count: leadCount },
+    { count: contactCount },
+    { count: quoteReqCount },
+    { count: serviceCount },
+    { count: followUpCount }
+  ] = await Promise.all([
+    db.from("Client").select("*", { count: "exact", head: true }),
+    db.from("Lead").select("*", { count: "exact", head: true }),
+    db.from("ContactSubmission").select("*", { count: "exact", head: true }),
+    db.from("QuoteRequest").select("*", { count: "exact", head: true }),
+    db.from("ServiceRequest").select("*", { count: "exact", head: true }),
+    db.from("FollowUp").select("*", { count: "exact", head: true })
   ]);
 
   const counts = {
-    clients: await prisma.client.count(),
-    leads: await prisma.lead.count(),
-    contacts: await prisma.contactSubmission.count(),
-    quoteReqs: await prisma.quoteRequest.count(),
-    services: await prisma.serviceRequest.count(),
-    followUps: await prisma.followUp.count(),
+    clients: clientCount ?? 0,
+    leads: leadCount ?? 0,
+    contacts: contactCount ?? 0,
+    quoteReqs: quoteReqCount ?? 0,
+    services: serviceCount ?? 0,
+    followUps: followUpCount ?? 0
   };
 
   return NextResponse.json({ counts, clients, leads, contacts, quoteReqs, services, followUps, quotesList, invoices, documents });

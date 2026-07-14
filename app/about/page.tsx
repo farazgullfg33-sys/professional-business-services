@@ -1,7 +1,13 @@
+import dynamic from "next/dynamic";
 import { MapPin } from "lucide-react";
 import { SectionHeading } from "@/components/SectionHeading";
-import { ParallaxWrap, Reveal, StatsCounter, TimelineMotion } from "@/components/motion/MotionScenes";
+import { ParallaxWrap, Reveal, TimelineMotion } from "@/components/motion/MotionScenes";
 import { aboutParagraphs, company, leadershipTeam } from "@/lib/company";
+
+const Stats3D = dynamic(
+  () => import("@/components/3d/Stats3D").then((m) => m.Stats3D),
+  { ssr: false }
+);
 
 export const metadata = {
   title: "About Us",
@@ -34,9 +40,9 @@ export default function AboutPage() {
             </Reveal>
           </ParallaxWrap>
           <div className="grid gap-5 sm:grid-cols-2">
-            {company.stats.map((stat) => (
+            {company.stats.map((stat, i) => (
               <div key={stat.label} className="glass-panel rounded-lg p-7 shadow-soft">
-                <StatsCounter {...stat} />
+                <Stats3D value={stat.value} suffix={stat.suffix} label={stat.label} coinCount={3 + i} />
               </div>
             ))}
           </div>

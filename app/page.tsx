@@ -1,11 +1,42 @@
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowRight, MessageCircle } from "lucide-react";
 import { Button } from "@/components/Button";
 import { SectionHeading } from "@/components/SectionHeading";
-import { HeroCanvas } from "@/components/HeroCanvas";
 import { DashboardPreview, HowItWorksFlow, LeadershipTeam, WhyChooseUs } from "@/components/home/HomeSections";
-import { CardTilt, Reveal, ScrollCue, StatsCounter, TestimonialCarousel, TypingText } from "@/components/motion/MotionScenes";
+import { CardTilt, Reveal, ScrollCue, TestimonialCarousel, TypingText } from "@/components/motion/MotionScenes";
 import { company, serviceHighlights, teamStats, testimonials } from "@/lib/company";
+
+const HeroScene = dynamic(
+  () => import("@/components/3d/HeroScene").then((m) => m.HeroScene),
+  { ssr: false }
+);
+
+const ServiceCard3D = dynamic(
+  () => import("@/components/3d/ServiceCard3D").then((m) => m.ServiceCard3D),
+  { ssr: false }
+);
+
+const Stats3D = dynamic(
+  () => import("@/components/3d/Stats3D").then((m) => m.Stats3D),
+  { ssr: false }
+);
+
+const ParticleField = dynamic(
+  () => import("@/components/3d/ParticleField").then((m) => m.ParticleField),
+  { ssr: false }
+);
+
+// Map service titles to 3D icon types
+const SERVICE_ICON_MAP: Record<string, string> = {
+  "Company Formation": "building",
+  "Visa Processing": "passport",
+  "Document Attestation": "certificate",
+  "Government Liaison": "shield",
+  "MOHRE & Labour": "document",
+  "Compliance": "gear",
+  "Finance & Billing": "coin"
+};
 
 export default function HomePage() {
   const whatsappHref = `https://wa.me/${company.whatsapp.replace(/\D/g, "")}`;
@@ -27,7 +58,7 @@ export default function HomePage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden bg-base">
-        <HeroCanvas />
+        <HeroScene />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-base/10 via-base/60 to-base" />
         <div className="section-shell relative py-20 text-center sm:py-28 lg:py-36">
           <p className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-gold/40 bg-glass px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-gold">
@@ -45,13 +76,15 @@ export default function HomePage() {
           </div>
           <ScrollCue />
         </div>
-        {/* Stats Bar */}
+        {/* Stats Bar — 3D coin counters */}
         <div className="section-shell relative -mt-6 grid gap-5 rounded-lg border border-edge bg-glass p-6 shadow-soft backdrop-blur md:grid-cols-4">
-          {teamStats.map((stat) => <StatsCounter key={stat.label} {...stat} />)}
+          {teamStats.map((stat, i) => (
+            <Stats3D key={stat.label} value={stat.value} suffix={stat.suffix} label={stat.label} coinCount={3 + i} />
+          ))}
         </div>
       </section>
 
-      {/* Services Grid */}
+      {/* Services Grid — 3D cards */}
       <section className="py-16 sm:py-24">
         <div className="section-shell">
           <SectionHeading
@@ -62,15 +95,17 @@ export default function HomePage() {
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {serviceHighlights.map((service) => {
               const Icon = service.icon;
+              const iconType = Object.entries(SERVICE_ICON_MAP).find(([key]) =>
+                service.title.includes(key)
+              )?.[1] ?? "document";
               return (
-                <CardTilt key={service.title}>
-                  <Icon className="h-10 w-10 text-gold transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6" />
-                  <h3 className="mt-5 font-heading text-xl font-semibold text-heading">{service.title}</h3>
+                <ServiceCard3D key={service.title} iconType={iconType}>
+                  <h3 className="font-heading text-xl font-semibold text-heading">{service.title}</h3>
                   <p className="mt-3 min-h-20 text-sm leading-6 text-body">{service.description}</p>
                   <Link href={service.href} className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-gold transition-transform duration-300 group-hover:translate-x-1">
                     Learn More <ArrowRight size={16} />
                   </Link>
-                </CardTilt>
+                </ServiceCard3D>
               );
             })}
           </div>
@@ -130,9 +165,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Client Results */}
-      <section className="bg-panel py-16 sm:py-24">
-        <div className="section-shell">
+      {/* Client Results — with particle field background */}
+      <section className="relative bg-panel py-16 sm:py-24 overflow-hidden">
+        <ParticleField className="absolute inset-0" />
+        <div className="section-shell relative z-10">
           <SectionHeading
             align="center"
             title="Client Results"
@@ -140,14 +176,13 @@ export default function HomePage() {
           />
           <div className="mt-8 grid gap-5 sm:grid-cols-2 md:grid-cols-4">
             {[
-              { value: "100+", label: "Companies Formed" },
-              { value: "5,000+", label: "Visas Processed" },
-              { value: "98%", label: "First-Time Approval" },
-              { value: "15+ Years", label: "Combined Experience" },
+              { value: 100, suffix: "+", label: "Companies Formed" },
+              { value: 5000, suffix: "+", label: "Visas Processed" },
+              { value: 98, suffix: "%", label: "First-Time Approval" },
+              { value: 15, suffix: "+ Yrs", label: "Combined Experience" }
             ].map((item, index) => (
               <Reveal key={item.label} delay={index * 0.08} className="glass-panel rounded-lg p-6 text-center shadow-soft">
-                <p className="font-heading text-3xl font-bold text-gold">{item.value}</p>
-                <p className="mt-2 text-sm font-medium text-body">{item.label}</p>
+                <Stats3D value={item.value} suffix={item.suffix} label={item.label} coinCount={4} />
               </Reveal>
             ))}
           </div>

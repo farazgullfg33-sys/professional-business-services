@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const schema = z.object({
   name: z.string().optional().default(""),
@@ -14,16 +14,18 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid submission" }, { status: 400 });
   }
-  await prisma.contactSubmission.create({ data: parsed.data });
-  // Also create a Lead
-  await prisma.lead.create({
-    data: {
+
+  const db = createAdminClient();
+  await Promise.all([
+    db.from("ContactSubmission").insert(parsed.data),
+    db.from("Lead").insert({
       name: parsed.data.name || "Website Contact",
       email: parsed.data.email,
       phone: parsed.data.phone,
       message: parsed.data.message,
       source: "website"
-    }
-  });
+    })
+  ]);
+
   return NextResponse.json({ ok: true });
 }

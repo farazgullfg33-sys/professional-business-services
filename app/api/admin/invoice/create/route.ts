@@ -1,21 +1,26 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { adminEventBus } from "@/lib/events";
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { quoteId, amount, paymentMethod } = await request.json();
   if (!quoteId || !amount) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
 
-  const invoice = await prisma.invoice.create({
-    data: { quoteId, amount: Number(amount), paymentMethod: paymentMethod || "Bank Transfer", status: "pending" }
-  });
+  const db = createAdminClient();
+  const { data: invoice, error } = await db.from("Invoice").insert({
+    quoteId,
+    amount: Number(amount),
+    paymentMethod: paymentMethod || "Bank Transfer",
+    status: "pending"
+  }).select().single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   adminEventBus.emit({ type: "created", entity: "invoice" });
-
   return NextResponse.json({ ok: true, invoice });
 }

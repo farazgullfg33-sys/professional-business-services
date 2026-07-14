@@ -1,12 +1,12 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 import { adminEventBus, type AdminEvent } from "@/lib/events";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) return new Response("Unauthorized", { status: 401 });
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return new Response("Unauthorized", { status: 401 });
 
   const encoder = new TextEncoder();
 

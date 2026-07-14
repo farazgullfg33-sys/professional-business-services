@@ -1,26 +1,31 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-  const quote = await prisma.quote.findUnique({ where: { id }, include: { client: true } });
-  if (!quote) return NextResponse.json({ error: "Quote not found" }, { status: 404 });
+  const db = createAdminClient();
+  const { data: quote, error } = await db
+    .from("Quote")
+    .select("*, Client(*)")
+    .eq("id", id)
+    .single();
+
+  if (error || !quote) return NextResponse.json({ error: "Quote not found" }, { status: 404 });
 
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "mm", format: "a4" });
 
-  // Header with logo
-  doc.setFillColor(26, 58, 92); // navy
+  doc.setFillColor(26, 58, 92);
   doc.rect(0, 0, 210, 30, "F");
-  doc.setTextColor(236, 180, 1); // gold
+  doc.setTextColor(236, 180, 1);
   doc.setFontSize(22);
   doc.setFont("helvetica", "bold");
   doc.text("Professional Business Services", 105, 14, { align: "center" });
@@ -28,28 +33,24 @@ export async function GET(request: Request) {
   doc.setFontSize(10);
   doc.text("PRO Services in UAE | Company Formation | Visa Processing", 105, 22, { align: "center" });
 
-  // Contact info
   doc.setTextColor(80, 80, 80);
   doc.setFontSize(8);
   doc.text("Abu Dhabi, UAE | info@proservices.ae | +971 50 123 4567", 105, 28, { align: "center" });
 
-  // Quote title
   doc.setTextColor(26, 58, 92);
   doc.setFontSize(16);
   doc.text("QUOTATION", 105, 42, { align: "center" });
   doc.setDrawColor(236, 180, 1);
   doc.line(20, 46, 190, 46);
 
-  // Client info
   doc.setFontSize(11);
   doc.setTextColor(40, 40, 40);
-  doc.text(`Client: ${quote.client.name}`, 20, 56);
-  if (quote.client.company) doc.text(`Company: ${quote.client.company}`, 20, 63);
-  if (quote.client.email) doc.text(`Email: ${quote.client.email}`, 20, 70);
+  doc.text(`Client: ${quote.Client.name}`, 20, 56);
+  if (quote.Client.company) doc.text(`Company: ${quote.Client.company}`, 20, 63);
+  if (quote.Client.email) doc.text(`Email: ${quote.Client.email}`, 20, 70);
   doc.text(`Date: ${new Date(quote.createdAt).toLocaleDateString()}`, 140, 56);
   doc.text(`Quote #: ${quote.id.slice(0, 8)}`, 140, 63);
 
-  // Services table
   let y = 82;
   doc.setFillColor(26, 58, 92);
   doc.rect(20, y, 170, 8, "F");
@@ -71,7 +72,6 @@ export async function GET(request: Request) {
     y += 8;
   });
 
-  // Totals
   y += 4;
   doc.setDrawColor(200, 200, 200);
   doc.line(120, y, 190, y);
@@ -89,7 +89,6 @@ export async function GET(request: Request) {
   doc.text("TOTAL:", 120, y, { align: "right" });
   doc.text(`AED ${quote.total.toFixed(2)}`, 185, y, { align: "right" });
 
-  // Footer
   doc.setTextColor(130, 130, 130);
   doc.setFontSize(8);
   doc.text("This is a computer-generated quotation. Valid for 15 days.", 105, 280, { align: "center" });

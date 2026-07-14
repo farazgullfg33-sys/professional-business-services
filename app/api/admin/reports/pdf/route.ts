@@ -1,31 +1,39 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { leadsBySource, staffProductivity, statusBreakdown } from "@/lib/reports";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const startOfYear = new Date(now.getFullYear(), 0, 1).toISOString();
 
-  const [clientCount, services, leads, invoicesMonth, invoicesYtd, pendingInvoices] = await Promise.all([
-    prisma.client.count(),
-    prisma.serviceRequest.findMany({ select: { status: true, assignedTo: true } }),
-    prisma.lead.findMany({ select: { source: true } }),
-    prisma.invoice.findMany({ where: { status: "paid", paidAt: { gte: startOfMonth } }, select: { amount: true } }),
-    prisma.invoice.findMany({ where: { status: "paid", paidAt: { gte: startOfYear } }, select: { amount: true } }),
-    prisma.invoice.count({ where: { status: "pending" } })
+  const db = createAdminClient();
+  const [
+    { count: clientCount },
+    { data: services },
+    { data: leads },
+    { data: invoicesMonth },
+    { data: invoicesYtd },
+    { count: pendingInvoices }
+  ] = await Promise.all([
+    db.from("Client").select("*", { count: "exact", head: true }),
+    db.from("ServiceRequest").select("status, assignedTo"),
+    db.from("Lead").select("source"),
+    db.from("Invoice").select("amount").eq("status", "paid").gte("paidAt", startOfMonth),
+    db.from("Invoice").select("amount").eq("status", "paid").gte("paidAt", startOfYear),
+    db.from("Invoice").select("*", { count: "exact", head: true }).eq("status", "pending")
   ]);
 
-  const revenueMonth = invoicesMonth.reduce((sum: number, i: { amount: number }) => sum + i.amount, 0);
-  const revenueYtd = invoicesYtd.reduce((sum: number, i: { amount: number }) => sum + i.amount, 0);
-  const pipeline = statusBreakdown(services);
-  const sources = leadsBySource(leads);
-  const productivity = staffProductivity(services);
+  const revenueMonth = (invoicesMonth ?? []).reduce((sum: number, i: { amount: number }) => sum + i.amount, 0);
+  const revenueYtd = (invoicesYtd ?? []).reduce((sum: number, i: { amount: number }) => sum + i.amount, 0);
+  const pipeline = statusBreakdown(services ?? []);
+  const sources = leadsBySource(leads ?? []);
+  const productivity = staffProductivity(services ?? []);
   const periodLabel = now.toLocaleString("en-US", { month: "long", year: "numeric" });
 
   const { jsPDF } = await import("jspdf");
@@ -62,11 +70,11 @@ export async function GET() {
 
   let y = 42;
   y = section("Summary", y);
-  y = row("Total Clients", String(clientCount), y);
-  y = row("Active Services", String(services.length), y);
+  y = row("Total Clients", String(clientCount ?? 0), y);
+  y = row("Active Services", String((services ?? []).length), y);
   y = row("Revenue This Month (AED)", revenueMonth.toFixed(2), y);
   y = row("Revenue Year to Date (AED)", revenueYtd.toFixed(2), y);
-  y = row("Pending Invoices", String(pendingInvoices), y);
+  y = row("Pending Invoices", String(pendingInvoices ?? 0), y);
 
   y = section("Service Pipeline", y + 6);
   if (pipeline.length === 0) y = row("No service requests yet", "", y);

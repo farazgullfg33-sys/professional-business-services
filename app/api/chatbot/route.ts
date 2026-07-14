@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const schema = z.object({
   name: z.string().optional().default(""),
@@ -14,6 +14,7 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid chatbot message" }, { status: 400 });
   }
+
   const messages = JSON.stringify([
     { role: "user", content: parsed.data.message, at: new Date().toISOString() },
     {
@@ -22,26 +23,26 @@ export async function POST(request: Request) {
       at: new Date().toISOString()
     }
   ]);
-  await prisma.chatbotConversation.create({
-    data: {
-      name: parsed.data.name,
+
+  const db = createAdminClient();
+  const isLead = Boolean(parsed.data.phone || parsed.data.email);
+
+  await db.from("ChatbotConversation").insert({
+    name: parsed.data.name,
+    phone: parsed.data.phone,
+    email: parsed.data.email,
+    messages,
+    lead: isLead
+  });
+
+  if (isLead) {
+    await db.from("Lead").insert({
+      name: parsed.data.name || "Chatbot Lead",
       phone: parsed.data.phone,
       email: parsed.data.email,
-      messages,
-      lead: Boolean(parsed.data.phone || parsed.data.email)
-    }
-  });
-  // Also create a Lead if contact info provided
-  if (parsed.data.phone || parsed.data.email) {
-    await prisma.lead.create({
-      data: {
-        name: parsed.data.name || "Chatbot Lead",
-        phone: parsed.data.phone,
-        email: parsed.data.email,
-        message: parsed.data.message,
-        serviceInterest: "Chatbot Inquiry",
-        source: "chatbot"
-      }
+      message: parsed.data.message,
+      serviceInterest: "Chatbot Inquiry",
+      source: "chatbot"
     });
   }
   return NextResponse.json({ ok: true });

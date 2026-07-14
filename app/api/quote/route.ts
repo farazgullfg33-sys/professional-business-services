@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const schema = z.object({
   name: z.string().min(1),
@@ -14,23 +14,25 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   const body = await request.json();
-  // Merge service/serviceInterest
   const serviceInterest = body.serviceInterest || body.service || "";
   const data = { ...body, serviceInterest };
   const parsed = schema.safeParse(data);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid quote request" }, { status: 400 });
   }
-  await prisma.quoteRequest.create({ data: parsed.data });
-  await prisma.lead.create({
-    data: {
+
+  const db = createAdminClient();
+  await Promise.all([
+    db.from("QuoteRequest").insert(parsed.data),
+    db.from("Lead").insert({
       name: parsed.data.name,
       email: parsed.data.email,
       phone: parsed.data.phone,
       serviceInterest: parsed.data.serviceInterest,
       message: parsed.data.message,
       source: "website"
-    }
-  });
+    })
+  ]);
+
   return NextResponse.json({ ok: true });
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppText } from "@/lib/whatsapp";
 
 export async function GET(request: Request) {
@@ -23,11 +23,17 @@ export async function POST(request: Request) {
     const text = (message?.text?.body as string | undefined)?.trim().toLowerCase();
 
     if (from && text === "status") {
-      const client = await prisma.client.findFirst({
-        where: { phone: { contains: from.slice(-9) } },
-        include: { services: { orderBy: { createdAt: "desc" }, take: 1 } }
-      });
-      const latest = client?.services[0];
+      const db = createAdminClient();
+      const { data: clients } = await db
+        .from("Client")
+        .select("name, ServiceRequest(serviceType, status, createdAt)")
+        .ilike("phone", `%${from.slice(-9)}`)
+        .limit(1);
+
+      const client = clients?.[0];
+      const services = (client as { ServiceRequest?: { serviceType: string; status: string }[] } | undefined)?.ServiceRequest ?? [];
+      const latest = services[0];
+
       const reply = latest
         ? `Hi ${client!.name}, your "${latest.serviceType}" request is currently: ${latest.status.replace(/_/g, " ")}.`
         : "We couldn't find an active request for this number. Please contact our office directly.";

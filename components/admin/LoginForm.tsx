@@ -1,13 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { LockKeyhole } from "lucide-react";
 import { Button } from "@/components/Button";
+import { createClient } from "@/lib/supabase/client";
 
 export function LoginForm() {
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-base px-5 py-20">
       <motion.div
@@ -25,19 +29,25 @@ export function LoginForm() {
           onSubmit={async (event) => {
             event.preventDefault();
             setError("");
+            setLoading(true);
             const form = new FormData(event.currentTarget);
-            const result = await signIn("credentials", {
-              email: form.get("email"),
-              password: form.get("password"),
-              redirect: true,
-              callbackUrl: "/admin"
+            const supabase = createClient();
+            const { error: authError } = await supabase.auth.signInWithPassword({
+              email: form.get("email") as string,
+              password: form.get("password") as string
             });
-            if (result?.error) setError("Invalid email or password");
+            setLoading(false);
+            if (authError) {
+              setError("Invalid email or password");
+            } else {
+              router.push("/admin");
+              router.refresh();
+            }
           }}
         >
           <input name="email" type="email" required placeholder="Email" className="w-full rounded-md border border-edge bg-base px-4 py-3 text-heading placeholder:text-muted focus:border-gold focus:outline-none" />
           <input name="password" type="password" required placeholder="Password" className="w-full rounded-md border border-edge bg-base px-4 py-3 text-heading placeholder:text-muted focus:border-gold focus:outline-none" />
-          <Button type="submit" className="w-full">Login</Button>
+          <Button type="submit" className="w-full" disabled={loading}>{loading ? "Signing in…" : "Login"}</Button>
           {error ? <p className="text-sm font-semibold text-red-400">{error}</p> : null}
         </form>
       </motion.div>

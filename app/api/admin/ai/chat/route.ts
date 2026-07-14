@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { callDeepSeek, type ChatMessage } from "@/lib/deepseek";
 
 const SYSTEM_PROMPT =
   "You are the internal AI assistant for Professional Business Services, a PRO office handling UAE company formation, visa processing, trade licensing, attestation, and compliance. You help staff (not clients) answer questions, assess client eligibility for services, and generate document checklists. Be concise, use short bullet points, and note when a government portal (Tamm, MOHRE, ICP, GDRFA, Tas'heel, DED, ADDED, FTA, MOFA) confirmation is required before finalizing.";
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
   const mode = body.mode || "chat";
@@ -19,10 +19,13 @@ export async function POST(request: Request) {
       const { clientId, serviceType } = body;
       if (!clientId || !serviceType) return NextResponse.json({ error: "clientId and serviceType required" }, { status: 400 });
 
-      const client = await prisma.client.findUnique({
-        where: { id: clientId },
-        include: { services: { select: { serviceType: true, status: true } } }
-      });
+      const db = createAdminClient();
+      const { data: client } = await db
+        .from("Client")
+        .select("*, ServiceRequest(serviceType, status)")
+        .eq("id", clientId)
+        .single();
+
       if (!client) return NextResponse.json({ error: "Client not found" }, { status: 404 });
 
       const profile = [
@@ -30,7 +33,7 @@ export async function POST(request: Request) {
         `Company: ${client.company || "N/A"}`,
         `Business type: ${client.businessType || "N/A"}`,
         `Source: ${client.source || "N/A"}`,
-        `Existing services: ${client.services.map((s: { serviceType: string; status: string }) => `${s.serviceType} (${s.status})`).join(", ") || "None"}`
+        `Existing services: ${(client.ServiceRequest ?? []).map((s: { serviceType: string; status: string }) => `${s.serviceType} (${s.status})`).join(", ") || "None"}`
       ].join("\n");
 
       const reply = await callDeepSeek([
