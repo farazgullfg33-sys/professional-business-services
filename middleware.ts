@@ -5,9 +5,21 @@ export async function middleware(request: NextRequest) {
   const hostname = request.headers.get("host") || "";
   const pathname = request.nextUrl.pathname;
 
-  let response = NextResponse.next({ request });
+  // Determine base response first — rewrite for admin-pro subdomain, passthrough otherwise
+  let response: NextResponse;
+  if (
+    hostname.includes("admin-pro") &&
+    !pathname.startsWith("/admin") &&
+    !pathname.startsWith("/api")
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/admin${pathname === "/" ? "" : pathname}`;
+    response = NextResponse.rewrite(url);
+  } else {
+    response = NextResponse.next({ request });
+  }
 
-  // Refresh Supabase session cookie on every request
+  // Refresh Supabase session — cookies are written to the single response above
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -17,8 +29,6 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           );
@@ -27,24 +37,12 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Refreshes the auth token — must be called before any supabase.auth.getUser()
   await supabase.auth.getUser();
-
-  // admin-pro.aiinvention.tech → rewrite to /admin
-  if (hostname.includes("admin-pro")) {
-    const url = request.nextUrl.clone();
-    if (!pathname.startsWith("/admin") && !pathname.startsWith("/api")) {
-      url.pathname = `/admin${pathname === "/" ? "" : pathname}`;
-      response = NextResponse.rewrite(url);
-    }
-  }
 
   response.headers.set("x-pathname", pathname);
   return response;
 }
 
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
