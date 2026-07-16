@@ -18,7 +18,7 @@ import { AdminChatbot } from "@/components/admin/AdminChatbot";
 
 type Stats = { clients: number; leads: number; contacts: number; quoteReqs: number; services: number };
 type Client = { id: string; name: string; email?: string; phone?: string; company?: string; businessType?: string; status: string; source?: string };
-type Lead = { id: string; name: string; email?: string; phone?: string; serviceInterest?: string; message?: string; status: string; source: string; createdAt?: string };
+type Lead = { id: string; name: string; email?: string; phone?: string; serviceInterest?: string; message?: string; notes?: string; status: string; source: string; createdAt?: string };
 type ServiceRow = { id: string; serviceType: string; status: string; priority: string; assignedTo?: string; deadline?: string; client: { name: string } };
 type FollowUp = { id: string; step: string; dueDate: string; client: { name: string } };
 type InvoiceRow = { id: string; amount: number; status: string; paidAt?: string; createdAt: string; quote: { client: { name: string } } };
@@ -127,6 +127,10 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
   const [showAddCommLog, setShowAddCommLog] = useState(false);
   const [commLogTypeFilter, setCommLogTypeFilter] = useState("all");
   const [leadSourceFilter, setLeadSourceFilter] = useState("all");
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [leadNoteText, setLeadNoteText] = useState("");
+  const [leadPrefill, setLeadPrefill] = useState<{ name?: string; email?: string; phone?: string } | null>(null);
+  const [convertingLeadId, setConvertingLeadId] = useState<string | null>(null);
 
   const fetchData = () => {
     setLoading(true);
@@ -170,7 +174,17 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     const r = await fetch("/api/admin/clients", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(Object.fromEntries(f)) });
-    if (r.ok) { setShowNewClient(false); setActive("Clients"); fetchData(); }
+    if (r.ok) {
+      setShowNewClient(false);
+      setLeadPrefill(null);
+      if (convertingLeadId) {
+        await fetch(`/api/admin/leads/${convertingLeadId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "converted" }) });
+        setData((prev: any) => prev ? { ...prev, leads: prev.leads?.map((l: Lead) => l.id === convertingLeadId ? { ...l, status: "converted" } : l) } : prev);
+        setConvertingLeadId(null);
+      }
+      setActive("Clients");
+      fetchData();
+    }
   };
 
   const handleNewQuote = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -223,6 +237,13 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ checkpoint: next, status: isLast ? "completed" : "in_progress" }),
     });
+  };
+
+  const saveLeadNote = async () => {
+    if (!selectedLead) return;
+    await fetch(`/api/admin/leads/${selectedLead.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ notes: leadNoteText }) });
+    setData((prev: any) => prev ? { ...prev, leads: prev.leads?.map((l: Lead) => l.id === selectedLead.id ? { ...l, notes: leadNoteText } : l) } : prev);
+    setSelectedLead(sl => sl ? { ...sl, notes: leadNoteText } : sl);
   };
 
   const searchFilter = (items: any[], key: string, fields: string[]) => {
@@ -349,25 +370,138 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
 
           {/* MODALS */}
           {showNewClient && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={()=>setShowNewClient(false)}>
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => { setShowNewClient(false); setLeadPrefill(null); setConvertingLeadId(null); }}>
               <motion.div
                 initial={{ opacity: 0, y: 12, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 className="glass-panel w-full max-w-lg mx-4 rounded-lg p-6 shadow-soft"
                 onClick={e=>e.stopPropagation()}
               >
-                <h3 className="text-xl font-heading font-bold text-heading mb-4">New Client Intake</h3>
-                <form className="grid gap-3" onSubmit={handleNewClient}>
-                  <input name="name" placeholder="Full Name *" className={inputClass} required/>
-                  <div className="grid grid-cols-2 gap-3"><input name="email" type="email" placeholder="Email" className={inputClass}/><input name="phone" placeholder="Phone" className={inputClass}/></div>
+                <h3 className="text-xl font-heading font-bold text-heading mb-4">{convertingLeadId ? "Convert Lead to Client" : "New Client Intake"}</h3>
+                <form key={leadPrefill?.name ?? "new"} className="grid gap-3" onSubmit={handleNewClient}>
+                  <input name="name" placeholder="Full Name *" defaultValue={leadPrefill?.name ?? ""} className={inputClass} required/>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input name="email" type="email" placeholder="Email" defaultValue={leadPrefill?.email ?? ""} className={inputClass}/>
+                    <input name="phone" placeholder="Phone" defaultValue={leadPrefill?.phone ?? ""} className={inputClass}/>
+                  </div>
                   <div className="grid grid-cols-2 gap-3"><input name="company" placeholder="Company" className={inputClass}/><select name="businessType" className={inputClass}><option value="">Business Type</option>{bizTypes.map(t=><option key={t} value={t}>{t}</option>)}</select></div>
                   <select name="source" className={inputClass}>{sources.map(s=><option key={s} value={s}>{s}</option>)}</select>
                   <textarea name="notes" placeholder="Notes" className={cn(inputClass,"h-20")}/>
-                  <Button type="submit">Add Client</Button>
+                  <Button type="submit">{convertingLeadId ? "Convert & Create Client" : "Add Client"}</Button>
                 </form>
               </motion.div>
             </div>
           )}
+          {/* LEAD DETAIL SLIDEOVER */}
+          <AnimatePresence>
+            {selectedLead && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+                  onClick={() => setSelectedLead(null)}
+                />
+                <motion.div
+                  initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
+                  transition={{ type: "tween", duration: 0.22 }}
+                  className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-[460px] glass-panel border-l border-edge shadow-soft flex flex-col"
+                  onClick={e => e.stopPropagation()}
+                >
+                  {/* Header */}
+                  <div className="flex items-start justify-between border-b border-edge px-6 py-4">
+                    <div>
+                      <h3 className="font-heading text-lg font-bold text-heading">{selectedLead.name}</h3>
+                      <span className={cn("mt-1 inline-block text-xs px-2 py-0.5 rounded-full capitalize",
+                        selectedLead.status === "new" ? "bg-blue-500/15 text-blue-300" :
+                        selectedLead.status === "contacted" ? "bg-gold/15 text-gold" :
+                        selectedLead.status === "qualified" ? "bg-emerald-500/15 text-emerald-300" :
+                        selectedLead.status === "converted" ? "bg-emerald-600/20 text-emerald-200" :
+                        "bg-red-500/15 text-red-300"
+                      )}>{selectedLead.status}</span>
+                    </div>
+                    <button onClick={() => setSelectedLead(null)} className="ml-4 flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-edge text-muted hover:text-heading"><X size={16} /></button>
+                  </div>
+
+                  {/* Scrollable body */}
+                  <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+                    {/* Contact info */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-muted uppercase tracking-wide mb-1">Email</p>
+                        <p className="text-sm text-heading">{selectedLead.email || "—"}</p>
+                        {selectedLead.email && (
+                          <button onClick={() => navigator.clipboard.writeText(selectedLead.email!)} className="mt-1 text-xs text-gold hover:underline">Copy Email</button>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted uppercase tracking-wide mb-1">Phone</p>
+                        <p className="text-sm text-heading">{selectedLead.phone || "—"}</p>
+                        {selectedLead.phone && (
+                          <button onClick={() => navigator.clipboard.writeText(selectedLead.phone!)} className="mt-1 text-xs text-gold hover:underline">Copy Phone</button>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted uppercase tracking-wide mb-1">Source</p>
+                        <span className="inline-block bg-gold/10 text-gold text-xs px-2 py-0.5 rounded-full capitalize">{selectedLead.source}</span>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted uppercase tracking-wide mb-1">Created</p>
+                        <p className="text-sm text-heading">{selectedLead.createdAt ? new Date(selectedLead.createdAt).toLocaleDateString("en-AE", { day: "numeric", month: "short", year: "numeric" }) : "—"}</p>
+                      </div>
+                    </div>
+
+                    {/* Service interest */}
+                    {selectedLead.serviceInterest && (
+                      <div>
+                        <p className="text-xs text-muted uppercase tracking-wide mb-1">Service Interest</p>
+                        <p className="text-sm text-heading">{selectedLead.serviceInterest}</p>
+                      </div>
+                    )}
+
+                    {/* Message */}
+                    {selectedLead.message && (
+                      <div>
+                        <p className="text-xs text-muted uppercase tracking-wide mb-1">Message</p>
+                        <p className="text-sm text-body leading-relaxed whitespace-pre-wrap">{selectedLead.message}</p>
+                      </div>
+                    )}
+
+                    {/* Notes */}
+                    <div>
+                      <p className="text-xs text-muted uppercase tracking-wide mb-2">Notes</p>
+                      <textarea
+                        value={leadNoteText}
+                        onChange={e => setLeadNoteText(e.target.value)}
+                        placeholder="Add notes about this lead..."
+                        className={cn(inputClass, "w-full h-24 resize-none")}
+                      />
+                      <button
+                        onClick={saveLeadNote}
+                        className="mt-2 rounded-md border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs font-medium text-gold hover:bg-gold/20 transition"
+                      >Save Note</button>
+                    </div>
+                  </div>
+
+                  {/* Footer — Convert to Client */}
+                  <div className="border-t border-edge px-6 py-4">
+                    <button
+                      disabled={selectedLead.status === "converted"}
+                      onClick={() => {
+                        setLeadPrefill({ name: selectedLead.name, email: selectedLead.email, phone: selectedLead.phone });
+                        setConvertingLeadId(selectedLead.id);
+                        setSelectedLead(null);
+                        setShowNewClient(true);
+                      }}
+                      className="w-full rounded-md bg-navy border border-gold/40 px-4 py-2.5 text-sm font-semibold text-gold hover:bg-navy/80 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {selectedLead.status === "converted" ? "Already Converted" : "Convert to Client →"}
+                    </button>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+
           {showNewQuote && data && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={()=>setShowNewQuote(false)}>
               <motion.div
@@ -703,25 +837,26 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
                   {/* Table */}
                   <div className="glass-panel rounded-lg shadow-soft">
                     <div className="overflow-x-auto">
-                      <table className="w-full min-w-[720px] text-sm">
-                        <thead className="bg-panel"><tr>{["Name","Email","Phone","Interest","Source","Status","Created",""].map(h => <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">{h}</th>)}</tr></thead>
+                      <table className="w-full min-w-[860px] text-sm">
+                        <thead className="bg-panel"><tr>{["Name","Email","Phone","Interest","Notes","Source","Status","Created",""].map(h => <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">{h}</th>)}</tr></thead>
                         <tbody className="divide-y divide-edge">
                           {(() => {
                             let rows: Lead[] = data.leads ?? [];
                             if (leadSourceFilter !== "all") rows = rows.filter((l: Lead) => l.source === leadSourceFilter);
                             const q = (moduleSearch["leads"] ?? "").toLowerCase();
-                            if (q) rows = rows.filter((l: Lead) => [l.name, l.email, l.phone, l.serviceInterest, l.source].some(v => v?.toLowerCase().includes(q)));
+                            if (q) rows = rows.filter((l: Lead) => [l.name, l.email, l.phone, l.serviceInterest, l.source, l.notes].some(v => v?.toLowerCase().includes(q)));
                             if (rows.length === 0) return (
-                              <tr><td colSpan={8} className="px-4 py-12 text-center text-muted">No leads found.</td></tr>
+                              <tr><td colSpan={9} className="px-4 py-12 text-center text-muted">No leads found.</td></tr>
                             );
                             return rows.map((l: Lead) => (
-                              <tr key={l.id} className="transition hover:bg-panel/60">
+                              <tr key={l.id} className="cursor-pointer transition hover:bg-panel/60" onClick={() => { setSelectedLead(l); setLeadNoteText(l.notes ?? ""); }}>
                                 <td className="px-4 py-3 font-medium text-heading">{l.name}</td>
                                 <td className="px-4 py-3 text-muted">{l.email || "—"}</td>
                                 <td className="px-4 py-3 text-muted">{l.phone || "—"}</td>
                                 <td className="px-4 py-3 text-muted text-xs">{l.serviceInterest || "—"}</td>
+                                <td className="px-4 py-3 text-muted text-xs max-w-[140px] truncate">{l.notes || "—"}</td>
                                 <td className="px-4 py-3"><span className="bg-gold/10 text-gold text-xs px-2 py-0.5 rounded-full capitalize">{l.source}</span></td>
-                                <td className="px-4 py-3">
+                                <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                                   <select value={l.status} onChange={async e => {
                                     const newStatus = e.target.value;
                                     setData((prev: any) => ({ ...prev, leads: prev.leads.map((x: Lead) => x.id === l.id ? { ...x, status: newStatus } : x) }));
@@ -731,7 +866,7 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
                                   </select>
                                 </td>
                                 <td className="px-4 py-3 text-muted text-xs">{l.createdAt ? new Date(l.createdAt).toLocaleDateString() : "—"}</td>
-                                <td className="px-4 py-3 text-right"><button onClick={() => deleteRecord(`/api/admin/leads/${l.id}`)} className="text-xs text-red-400 hover:underline">Delete</button></td>
+                                <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}><button onClick={() => deleteRecord(`/api/admin/leads/${l.id}`)} className="text-xs text-red-400 hover:underline">Delete</button></td>
                               </tr>
                             ));
                           })()}
