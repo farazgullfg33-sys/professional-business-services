@@ -34,7 +34,10 @@ export async function GET() {
     safeData(() => db.from("ContactSubmission").select("*").order("createdAt", { ascending: false }).limit(50)),
     safeData(() => db.from("QuoteRequest").select("*").order("createdAt", { ascending: false }).limit(50)),
     // Alias joins to lowercase (client / quote) so the shape matches the component's access pattern
-    safeData(() => db.from("ServiceRequest").select("*, client:Client(name)").order("createdAt", { ascending: false }).limit(50)),
+    // No client:Client(name) join — the pipeline reads client names from data.clients
+    // client-side (AdminPanel kanban fallback), so a stale/missing PostgREST FK
+    // relationship can never blank out the whole pipeline. clientId is in select("*").
+    safeData(() => db.from("ServiceRequest").select("*").order("createdAt", { ascending: false }).limit(100)),
     safeData(() => db.from("FollowUp").select("*, client:Client(name)").order("dueDate", { ascending: true }).limit(50)),
     safeData(() => db.from("Quote").select("*, client:Client(name, company)").order("createdAt", { ascending: false }).limit(50)),
     safeData(() => db.from("Invoice").select("*, quote:Quote(*, client:Client(name))").order("createdAt", { ascending: false }).limit(50)),

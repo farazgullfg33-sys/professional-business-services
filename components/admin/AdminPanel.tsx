@@ -19,7 +19,7 @@ import { AdminChatbot } from "@/components/admin/AdminChatbot";
 type Stats = { clients: number; leads: number; contacts: number; quoteReqs: number; services: number };
 type Client = { id: string; name: string; email?: string; phone?: string; company?: string; businessType?: string; status: string; source?: string };
 type Lead = { id: string; name: string; email?: string; phone?: string; serviceInterest?: string; message?: string; notes?: string; status: string; source: string; createdAt?: string };
-type ServiceRow = { id: string; clientId: string; serviceType: string; status: string; priority: string; assignedTo?: string; deadline?: string; client: { name: string } };
+type ServiceRow = { id: string; clientId: string; serviceType: string; status: string; priority: string; assignedTo?: string; deadline?: string; client?: { name: string } };
 type FollowUp = { id: string; step: string; dueDate: string; client: { name: string } };
 type InvoiceRow = { id: string; amount: number; status: string; paidAt?: string; createdAt: string; quote: { client: { name: string } } };
 type DocumentRow = { id: string; name: string; type: string; fileUrl?: string; expiryDate?: string; client: { name: string } };
