@@ -18,7 +18,7 @@ import { AdminChatbot } from "@/components/admin/AdminChatbot";
 
 type Stats = { clients: number; leads: number; contacts: number; quoteReqs: number; services: number };
 type Client = { id: string; name: string; email?: string; phone?: string; company?: string; businessType?: string; status: string; source?: string };
-type Lead = { id: string; name: string; email?: string; phone?: string; serviceInterest?: string; message?: string; status: string; source: string };
+type Lead = { id: string; name: string; email?: string; phone?: string; serviceInterest?: string; message?: string; status: string; source: string; createdAt?: string };
 type ServiceRow = { id: string; serviceType: string; status: string; priority: string; assignedTo?: string; deadline?: string; client: { name: string } };
 type FollowUp = { id: string; step: string; dueDate: string; client: { name: string } };
 type InvoiceRow = { id: string; amount: number; status: string; paidAt?: string; createdAt: string; quote: { client: { name: string } } };
@@ -41,6 +41,7 @@ const pipelineColumns = [
 const modules = [
   { name: "Dashboard", icon: LayoutDashboard, detail: "Revenue, active clients, pending tasks, quick actions" },
   { name: "Clients", icon: UsersRound, detail: "Search, filters, CRUD-ready client table, source, linked services count" },
+  { name: "Leads", icon: Sparkles, detail: "Lead pipeline, source tracking, status management" },
   { name: "Service Pipeline", icon: ClipboardList, detail: "Drag-drop kanban: New, In Progress, Review, Completed" },
   { name: "Visa Tracker", icon: FileBadge, detail: "Visa status, expiry alerts at 60/30/14/7 days, bulk actions" },
   { name: "Company Formation", icon: CheckSquare, detail: "14-step checklist per client with progress bar" },
@@ -125,6 +126,7 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
   const [showAddAttestation, setShowAddAttestation] = useState(false);
   const [showAddCommLog, setShowAddCommLog] = useState(false);
   const [commLogTypeFilter, setCommLogTypeFilter] = useState("all");
+  const [leadSourceFilter, setLeadSourceFilter] = useState("all");
 
   const fetchData = () => {
     setLoading(true);
@@ -685,7 +687,60 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
                 </div>
               )}
 
-              {active==="Leads" && data && <div className="glass-panel rounded-lg shadow-soft"><div className="overflow-x-auto"><table className="w-full min-w-[560px] text-sm"><thead className="bg-panel text-heading"><tr><th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Name</th><th className="px-4 py-3 hidden sm:table-cell text-left text-xs font-semibold uppercase tracking-wide text-muted">Email</th><th className="px-4 py-3 hidden sm:table-cell text-left text-xs font-semibold uppercase tracking-wide text-muted">Phone</th><th className="px-4 py-3 hidden md:table-cell text-left text-xs font-semibold uppercase tracking-wide text-muted">Interest</th><th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Status</th><th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Source</th></tr></thead><tbody className="divide-y divide-edge">{data.leads?.map((l:Lead)=><tr key={l.id} className="transition hover:bg-panel/60"><td className="px-4 py-3 font-medium text-heading">{l.name}</td><td className="px-4 py-3 hidden sm:table-cell text-muted">{l.email||"-"}</td><td className="px-4 py-3 hidden sm:table-cell text-muted">{l.phone||"-"}</td><td className="px-4 py-3 hidden md:table-cell text-muted">{l.serviceInterest||"-"}</td><td className="px-4 py-3 text-body">{l.status}</td><td className="px-4 py-3"><span className="bg-gold/10 text-gold text-xs px-2 py-0.5 rounded-full">{l.source}</span></td></tr>)}</tbody></table></div></div>}
+              {active==="Leads" && data && (
+                <div className="space-y-4">
+                  {/* Source filter tabs */}
+                  <div className="flex flex-wrap gap-2">
+                    {["all","chatbot","website","direct","referral","call"].map(src => (
+                      <button key={src} onClick={() => setLeadSourceFilter(src)}
+                        className={cn("px-3 py-1.5 rounded-full text-xs font-medium capitalize transition",
+                          leadSourceFilter === src ? "bg-navy text-white" : "bg-panel border border-edge text-muted hover:border-gold hover:text-heading"
+                        )}>{src === "all" ? "All Sources" : src}</button>
+                    ))}
+                  </div>
+                  {/* Search */}
+                  <input value={moduleSearch["leads"] ?? ""} onChange={e => setModuleSearch(p => ({ ...p, leads: e.target.value }))} placeholder="Search leads..." className={cn(inputClass, "w-full max-w-sm")} />
+                  {/* Table */}
+                  <div className="glass-panel rounded-lg shadow-soft">
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[720px] text-sm">
+                        <thead className="bg-panel"><tr>{["Name","Email","Phone","Interest","Source","Status","Created",""].map(h => <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">{h}</th>)}</tr></thead>
+                        <tbody className="divide-y divide-edge">
+                          {(() => {
+                            let rows: Lead[] = data.leads ?? [];
+                            if (leadSourceFilter !== "all") rows = rows.filter((l: Lead) => l.source === leadSourceFilter);
+                            const q = (moduleSearch["leads"] ?? "").toLowerCase();
+                            if (q) rows = rows.filter((l: Lead) => [l.name, l.email, l.phone, l.serviceInterest, l.source].some(v => v?.toLowerCase().includes(q)));
+                            if (rows.length === 0) return (
+                              <tr><td colSpan={8} className="px-4 py-12 text-center text-muted">No leads found.</td></tr>
+                            );
+                            return rows.map((l: Lead) => (
+                              <tr key={l.id} className="transition hover:bg-panel/60">
+                                <td className="px-4 py-3 font-medium text-heading">{l.name}</td>
+                                <td className="px-4 py-3 text-muted">{l.email || "—"}</td>
+                                <td className="px-4 py-3 text-muted">{l.phone || "—"}</td>
+                                <td className="px-4 py-3 text-muted text-xs">{l.serviceInterest || "—"}</td>
+                                <td className="px-4 py-3"><span className="bg-gold/10 text-gold text-xs px-2 py-0.5 rounded-full capitalize">{l.source}</span></td>
+                                <td className="px-4 py-3">
+                                  <select value={l.status} onChange={async e => {
+                                    const newStatus = e.target.value;
+                                    setData((prev: any) => ({ ...prev, leads: prev.leads.map((x: Lead) => x.id === l.id ? { ...x, status: newStatus } : x) }));
+                                    await fetch(`/api/admin/leads/${l.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: newStatus }) });
+                                  }} className="rounded border border-edge bg-base px-2 py-1 text-xs text-heading focus:border-gold focus:outline-none">
+                                    {["new","contacted","qualified","converted","lost"].map(s => <option key={s} value={s}>{s}</option>)}
+                                  </select>
+                                </td>
+                                <td className="px-4 py-3 text-muted text-xs">{l.createdAt ? new Date(l.createdAt).toLocaleDateString() : "—"}</td>
+                                <td className="px-4 py-3 text-right"><button onClick={() => deleteRecord(`/api/admin/leads/${l.id}`)} className="text-xs text-red-400 hover:underline">Delete</button></td>
+                              </tr>
+                            ));
+                          })()}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {active==="Quotes & Invoices" && data && <div className="space-y-6">
                 <div className="glass-panel rounded-lg shadow-soft"><h3 className="px-4 py-3 font-heading font-semibold text-heading border-b border-edge">Quote Requests (Website)</h3><div className="overflow-x-auto"><table className="w-full min-w-[560px] text-sm"><thead className="bg-panel"><tr><th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Name</th><th className="px-4 py-3 hidden sm:table-cell text-left text-xs font-semibold uppercase tracking-wide text-muted">Email</th><th className="px-4 py-3 hidden sm:table-cell text-left text-xs font-semibold uppercase tracking-wide text-muted">Company</th><th className="px-4 py-3 hidden md:table-cell text-left text-xs font-semibold uppercase tracking-wide text-muted">Service</th><th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Date</th></tr></thead><tbody className="divide-y divide-edge">{data.quoteReqs?.map((q:any)=><tr key={q.id} className="transition hover:bg-panel/60"><td className="px-4 py-3 font-medium text-heading">{q.name}</td><td className="px-4 py-3 hidden sm:table-cell text-muted">{q.email}</td><td className="px-4 py-3 hidden sm:table-cell text-muted">{q.company||"-"}</td><td className="px-4 py-3 hidden md:table-cell text-muted">{q.serviceInterest||"-"}</td><td className="px-4 py-3 text-muted">{new Date(q.createdAt).toLocaleDateString()}</td></tr>)}</tbody></table></div></div>
