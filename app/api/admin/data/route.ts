@@ -42,7 +42,7 @@ export async function GET() {
     safeData(() => db.from("Document").select("*, client:Client(name)").order("createdAt", { ascending: false }).limit(100)),
     safeData(() => db.from("Visa").select("*, client:Client(name)").order("expiryDate", { ascending: true }).limit(100)),
     safeData(() => db.from("License").select("*, client:Client(name)").order("expiryDate", { ascending: true }).limit(100)),
-    safeData(() => db.from("FormationChecklist").select("*, client:Client(name)").order("clientId").order("step")),
+    safeData(() => db.from("FormationChecklist").select("*").order("clientId").order("step")),
     safeData(() => db.from("ComplianceDeadline").select("*, client:Client(name)").order("dueDate", { ascending: true }).limit(100)),
     safeData(() => db.from("Staff").select("id, name, email, role, active").order("name")),
     safeData(() => db.from("Attestation").select("*, client:Client(name)").order("createdAt", { ascending: false }).limit(100)),

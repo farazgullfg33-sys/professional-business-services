@@ -25,7 +25,7 @@ type InvoiceRow = { id: string; amount: number; status: string; paidAt?: string;
 type DocumentRow = { id: string; name: string; type: string; fileUrl?: string; expiryDate?: string; client: { name: string } };
 type VisaRow = { id: string; type: string; status: string; applicationDate?: string; expiryDate?: string; remarks?: string; client: { name: string } };
 type LicenseRow = { id: string; licenseNumber?: string; type?: string; issueDate?: string; expiryDate?: string; status: string; client: { name: string } };
-type FormationRow = { id: string; clientId: string; step: number; name: string; completed: boolean; client: { name: string } };
+type FormationRow = { id: string; clientId: string; step: number; name: string; completed: boolean; notes?: string };
 type ComplianceRow = { id: string; type: string; dueDate: string; status: string; notes?: string; client: { name: string } };
 type StaffRow = { id: string; name: string; email: string; role: string; active: boolean };
 type AttestationRow = { id: string; clientId: string; documentName: string; documentType?: string; checkpoint: string; status: string; notes?: string; createdAt: string; client: { name: string } };
@@ -198,6 +198,7 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
     e.preventDefault();
     const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Object.fromEntries(new FormData(e.currentTarget))) });
     if (r.ok) { onDone(); fetchData(); }
+    else { const d = await r.json().catch(() => ({})); alert(`Error: ${d.error || r.status}`); }
   };
 
   const toggleFormationStep = async (id: string, completed: boolean) => {
@@ -717,8 +718,8 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
                         <p className="text-xs font-semibold uppercase tracking-wide text-muted">Active Clients</p>
                         <span className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-400/15 text-blue-300"><UsersRound size={16}/></span>
                       </div>
-                      <p className="mt-3 font-heading text-3xl font-bold text-heading">{initialStats.clients}</p>
-                      <p className="mt-1 text-xs text-gold">{initialStats.leads} leads in pipeline</p>
+                      <p className="mt-3 font-heading text-3xl font-bold text-heading">{data?.counts?.clients ?? initialStats.clients}</p>
+                      <p className="mt-1 text-xs text-gold">{data?.counts?.leads ?? initialStats.leads} leads in pipeline</p>
                     </div>
                     <div className="glass-panel rounded-lg p-5 shadow-soft transition hover:border-gold/25">
                       <div className="flex items-center justify-between">
@@ -813,7 +814,7 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
                               className="cursor-grab rounded-md border border-edge bg-panel p-3 text-sm transition hover:border-gold/30 active:cursor-grabbing"
                             >
                               <div className="flex items-start justify-between gap-2">
-                                <p className="font-semibold text-heading">{s.client?.name ?? "—"}</p>
+                                <p className="font-semibold text-heading">{s.client?.name ?? (data.clients as Client[])?.find((c: Client) => c.id === s.clientId)?.name ?? "—"}</p>
                                 <GripVertical size={14} className="mt-0.5 hidden shrink-0 text-muted sm:block" />
                               </div>
                               <p className="mt-1 text-xs text-body">{s.serviceType}</p>
