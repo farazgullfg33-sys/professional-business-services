@@ -19,7 +19,7 @@ import { AdminChatbot } from "@/components/admin/AdminChatbot";
 type Stats = { clients: number; leads: number; contacts: number; quoteReqs: number; services: number };
 type Client = { id: string; name: string; email?: string; phone?: string; company?: string; businessType?: string; status: string; source?: string };
 type Lead = { id: string; name: string; email?: string; phone?: string; serviceInterest?: string; message?: string; notes?: string; status: string; source: string; createdAt?: string };
-type ServiceRow = { id: string; serviceType: string; status: string; priority: string; assignedTo?: string; deadline?: string; client: { name: string } };
+type ServiceRow = { id: string; clientId: string; serviceType: string; status: string; priority: string; assignedTo?: string; deadline?: string; client: { name: string } };
 type FollowUp = { id: string; step: string; dueDate: string; client: { name: string } };
 type InvoiceRow = { id: string; amount: number; status: string; paidAt?: string; createdAt: string; quote: { client: { name: string } } };
 type DocumentRow = { id: string; name: string; type: string; fileUrl?: string; expiryDate?: string; client: { name: string } };
@@ -201,13 +201,32 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
   };
 
   const toggleFormationStep = async (id: string, completed: boolean) => {
-    setData((prev: any) => prev ? { ...prev, formation: prev.formation?.map((f: FormationRow) => f.id === id ? { ...f, completed } : f) } : prev);
+    setData((prev: any) => {
+      if (!prev) return prev;
+      const updated: FormationRow[] = prev.formation?.map((f: FormationRow) => f.id === id ? { ...f, completed } : f) ?? [];
+      // If all 14 steps now complete, find and auto-complete the formation service
+      const clientId = prev.formation?.find((f: FormationRow) => f.id === id)?.clientId;
+      if (clientId && completed) {
+        const clientSteps: FormationRow[] = updated.filter((f: FormationRow) => f.clientId === clientId);
+        if (clientSteps.length === 14 && clientSteps.every((f: FormationRow) => f.completed)) {
+          const svc = (prev.services ?? []).find((s: ServiceRow) => s.clientId === clientId && s.serviceType === "company_formation" && s.status !== "completed");
+          if (svc) {
+            fetch(`/api/admin/services/${svc.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "completed" }) });
+            return { ...prev, formation: updated, services: prev.services.map((s: ServiceRow) => s.id === svc.id ? { ...s, status: "completed" } : s) };
+          }
+        }
+      }
+      return { ...prev, formation: updated };
+    });
     await fetch(`/api/admin/formation/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ completed }) });
   };
 
   const startFormation = async (clientId: string) => {
     const r = await fetch("/api/admin/formation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientId }) });
-    if (r.ok) fetchData(); else { const d = await r.json(); alert(d.error || "Failed"); }
+    if (!r.ok) { const d = await r.json(); alert(d.error || "Failed"); return; }
+    // Create a matching ServiceRequest so it appears on the pipeline board
+    await fetch("/api/admin/services", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientId, serviceType: "company_formation", status: "in_progress", priority: "normal" }) });
+    fetchData();
   };
 
   const toggleStaffActive = async (id: string, active: boolean) => {
@@ -1313,7 +1332,6 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
                 </div>
               )}
 
-              {placeholders.includes(active) && <div className="glass-panel rounded-lg p-8 text-center shadow-soft"><p className="text-muted text-lg">Coming Soon</p><p className="text-muted/70 text-sm mt-2">Database schema ready. Next phase build.</p></div>}
 
               {active==="Reports" && <div className="space-y-6">
                 <div className="flex flex-wrap items-center justify-between gap-3">
