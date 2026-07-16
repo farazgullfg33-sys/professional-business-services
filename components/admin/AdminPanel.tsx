@@ -148,9 +148,9 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
   const revenueSeries = useMemo(() => monthlyRevenueSeries(data?.invoices), [data]);
   const pipelineBreakdown = useMemo(() => statusBreakdown(data?.services), [data]);
   const funnel = useMemo(() => acquisitionFunnel({
-    leads: initialStats.leads,
-    quoteReqs: initialStats.quoteReqs,
-    clients: initialStats.clients,
+    leads: data?.counts?.leads ?? initialStats.leads,
+    quoteReqs: data?.counts?.quoteReqs ?? initialStats.quoteReqs,
+    clients: data?.counts?.clients ?? initialStats.clients,
     completed: (data?.services ?? []).filter((s: ServiceRow) => ["completed", "delivered"].includes(s.status)).length
   }), [data, initialStats]);
   const sourceBreakdown = useMemo(() => leadsBySource(data?.leads), [data]);
@@ -734,8 +734,8 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
                         <p className="text-xs font-semibold uppercase tracking-wide text-muted">Quote Requests</p>
                         <span className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-400/15 text-emerald-300"><FileText size={16}/></span>
                       </div>
-                      <p className="mt-3 font-heading text-3xl font-bold text-heading">{initialStats.quoteReqs}</p>
-                      <p className="mt-1 text-xs text-muted">{initialStats.contacts} contact messages</p>
+                      <p className="mt-3 font-heading text-3xl font-bold text-heading">{data?.counts?.quoteReqs ?? initialStats.quoteReqs}</p>
+                      <p className="mt-1 text-xs text-muted">{data?.counts?.contacts ?? initialStats.contacts} contact messages</p>
                     </div>
                   </div>
 
@@ -759,7 +759,10 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
 
                   <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
                     <div className="glass-panel rounded-lg p-5 shadow-soft transition hover:border-gold/25 sm:p-6">
-                      <h3 className="font-heading font-semibold text-heading text-lg">Pipeline Overview</h3>
+                      <div className="flex items-center justify-between gap-3">
+                        <h3 className="font-heading font-semibold text-heading text-lg">Pipeline Overview</h3>
+                        <span className="rounded-full bg-gold/10 px-3 py-1 text-xs font-semibold text-gold">{data?.counts?.services ?? initialStats.services} active services</span>
+                      </div>
                       <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-4">{pipelineColumns.map(col=>(
                         <div key={col.key} className="rounded-md border border-edge bg-panel p-3 transition hover:border-gold/25">
                           <p className="flex items-center gap-2 text-sm font-semibold text-heading"><span className={cn("h-2 w-2 rounded-full", col.dot)} />{col.label}</p>
