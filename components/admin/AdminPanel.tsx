@@ -972,7 +972,7 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
                         {clientIds.map((cid: string) => {
                           const steps = allFormation.filter((f: FormationRow) => f.clientId === cid).sort((a, b) => a.step - b.step);
                           const pct = steps.length > 0 ? Math.round((steps.filter(s => s.completed).length / steps.length) * 100) : 0;
-                          const clientName = steps[0]?.client?.name ?? (data.clients?.find((c: any) => c.id === cid)?.name ?? cid);
+                          const clientName = data.clients?.find((c: any) => c.id === cid)?.name ?? cid;
                           return (
                             <div key={cid} className="glass-panel rounded-lg p-5 shadow-soft">
                               <div className="flex items-center justify-between mb-3">
