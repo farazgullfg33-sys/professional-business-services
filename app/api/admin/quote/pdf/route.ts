@@ -1,6 +1,27 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  NAVY, NAVY_MID, HEADER_BG, YELLOW, BLACK, GRAY_TITLE,
+  MARGIN_L, MARGIN_R, money, refNumber, formatDate,
+  drawHeader, drawFooter, sectionTitle, listBlock, GENERAL_TERMS, FONT,
+} from "@/lib/pdf/brand";
+
+const REQUIRED_DOCS_STD = [
+  "PASSPORT COPY (OWNER / PARTNERS)",
+  "EMIRATES ID / VISA COPY",
+  "TRADE LICENSE COPY (IF EXISTING)",
+  "MOA / COMPANY DOCUMENTS",
+  "TENANCY CONTRACT / EJARI (IF APPLICABLE)",
+];
+
+const REQUIRED_DOCS_ICV = [
+  "PRODUCT LIST WITH INFORMATION",
+  "COMMERCIAL LICENSE",
+  "AUDITED FINANCIAL STATEMENTS (LAST 2 YEARS)",
+  "VAT REGISTRATION CERTIFICATE",
+  "EMIRATES ID & PASSPORT OF AUTHORIZED SIGNATORY",
+];
 
 export async function GET(request: Request) {
   const supabase = createClient();
@@ -9,6 +30,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
+  const variant = searchParams.get("variant"); // "icv" → ICV & ADNOC Pre-Qualification
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
   const db = createAdminClient();
@@ -20,85 +42,135 @@ export async function GET(request: Request) {
 
   if (error || !quote) return NextResponse.json({ error: "Quote not found" }, { status: 404 });
 
+  const isIcv = variant === "icv";
+  const subject = isIcv ? "ICV & ADNOC Pre-Qualification" : "Business Services Quotation";
+  const client = quote.Client ?? {};
+  const services: string[] = String(quote.services || "")
+    .split(",").map((s) => s.trim()).filter(Boolean);
+
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "mm", format: "a4" });
 
-  doc.setFillColor(26, 58, 92);
-  doc.rect(0, 0, 210, 30, "F");
-  doc.setTextColor(236, 180, 1);
-  doc.setFontSize(22);
-  doc.setFont("helvetica", "bold");
-  doc.text("Professional Business Services", 105, 14, { align: "center" });
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(10);
-  doc.text("PRO Services in UAE | Company Formation | Visa Processing", 105, 22, { align: "center" });
+  drawHeader(doc, "QUOTATION");
 
-  doc.setTextColor(80, 80, 80);
-  doc.setFontSize(8);
-  doc.text("Abu Dhabi, UAE | info@proservices.ae | +971 50 123 4567", 105, 28, { align: "center" });
+  // ── Client info block (two columns, no border) ──────────────────
+  let y = 42;
+  const L = (t: string, x: number, yy: number) => { doc.setFont(FONT, "bold"); doc.setTextColor(...BLACK); doc.setFontSize(9.5); doc.text(t, x, yy); };
+  const V = (t: string, x: number, yy: number) => { doc.setFont(FONT, "normal"); doc.setTextColor(...BLACK); doc.setFontSize(9.5); doc.text(t || "-", x, yy); };
 
-  doc.setTextColor(26, 58, 92);
-  doc.setFontSize(16);
-  doc.text("QUOTATION", 105, 42, { align: "center" });
-  doc.setDrawColor(236, 180, 1);
-  doc.line(20, 46, 190, 46);
-
-  doc.setFontSize(11);
-  doc.setTextColor(40, 40, 40);
-  doc.text(`Client: ${quote.Client.name}`, 20, 56);
-  if (quote.Client.company) doc.text(`Company: ${quote.Client.company}`, 20, 63);
-  if (quote.Client.email) doc.text(`Email: ${quote.Client.email}`, 20, 70);
-  doc.text(`Date: ${new Date(quote.createdAt).toLocaleDateString()}`, 140, 56);
-  doc.text(`Quote #: ${quote.id.slice(0, 8)}`, 140, 63);
-
-  let y = 82;
-  doc.setFillColor(26, 58, 92);
-  doc.rect(20, y, 170, 8, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(9);
-  doc.text("Service", 25, y + 6);
-  doc.text("Govt Fee (AED)", 120, y + 6, { align: "right" });
-  doc.text("PRO Fee (AED)", 155, y + 6, { align: "right" });
-  doc.text("Total (AED)", 185, y + 6, { align: "right" });
-
-  y += 10;
-  doc.setTextColor(40, 40, 40);
-  const services = quote.services.split(",").map((s: string) => s.trim());
-  services.forEach((s: string) => {
-    doc.text(s, 25, y + 5);
-    doc.text("0.00", 120, y + 5, { align: "right" });
-    doc.text("0.00", 155, y + 5, { align: "right" });
-    doc.text("0.00", 185, y + 5, { align: "right" });
-    y += 8;
-  });
-
-  y += 4;
-  doc.setDrawColor(200, 200, 200);
-  doc.line(120, y, 190, y);
+  L("Name:", MARGIN_L, y);            V(client.name || "-", MARGIN_L + 28, y);
+  L("DATE:", 120, y);                 V(formatDate(quote.createdAt), 150, y);
   y += 6;
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
-  doc.text("Govt Fees:", 120, y, { align: "right" });
-  doc.text(`AED ${quote.govFees.toFixed(2)}`, 185, y, { align: "right" });
-  y += 7;
-  doc.text("PRO Service Fees:", 120, y, { align: "right" });
-  doc.text(`AED ${quote.proFees.toFixed(2)}`, 185, y, { align: "right" });
-  y += 7;
-  doc.setFontSize(12);
-  doc.setTextColor(236, 180, 1);
-  doc.text("TOTAL:", 120, y, { align: "right" });
-  doc.text(`AED ${quote.total.toFixed(2)}`, 185, y, { align: "right" });
+  L("Company Name:", MARGIN_L, y);    V(client.company || "-", MARGIN_L + 28, y);
+  L("Reference #:", 120, y);          V(refNumber(quote.createdAt), 150, y);
+  y += 6;
+  L("Address:", MARGIN_L, y);         V(client.address || "Abu Dhabi, UAE", MARGIN_L + 28, y);
+  L("Client's ID:", 120, y);          V("-", 150, y);
+  y += 6;
+  L("Contact no.:", MARGIN_L, y);     V(client.phone || "-", MARGIN_L + 28, y);
+  L("Subject:", 120, y);              V(subject, 150, y);
+  y += 10;
 
-  doc.setTextColor(130, 130, 130);
-  doc.setFontSize(8);
-  doc.text("This is a computer-generated quotation. Valid for 15 days.", 105, 280, { align: "center" });
-  doc.text("Professional Business Services | Abu Dhabi, UAE", 105, 286, { align: "center" });
+  // ── Quotation table (3 columns) ─────────────────────────────────
+  const xSR = MARGIN_L, xDesc = 42, xAmt = 159, xEnd = MARGIN_R;
+  const centerOf = (a: number, b: number) => (a + b) / 2;
+
+  // Header row (#DCE6F1 fill, navy bold, centered)
+  const hH = 9;
+  doc.setFillColor(...HEADER_BG);
+  doc.rect(xSR, y, 180, hH, "F");
+  doc.setDrawColor(...NAVY_MID);
+  doc.setLineWidth(0.5);
+  doc.rect(xSR, y, 180, hH, "S");
+  doc.line(xDesc, y, xDesc, y + hH);
+  doc.line(xAmt, y, xAmt, y + hH);
+  doc.setFont(FONT, "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...NAVY);
+  doc.text("S.R.NO", centerOf(xSR, xDesc), y + 5.9, { align: "center" });
+  doc.text("DESCRIPTION", centerOf(xDesc, xAmt), y + 5.9, { align: "center" });
+  doc.text("AMOUNT", centerOf(xAmt, xEnd), y + 5.9, { align: "center" });
+  y += hH;
+
+  // Body rows
+  const bodyRow = (sr: string, descText: string, amountText: string) => {
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(9.5);
+    const lines = doc.splitTextToSize(descText, (xAmt - xDesc) - 6) as string[];
+    const h = Math.max(8, lines.length * 4.7 + 3.4);
+    doc.setDrawColor(...NAVY_MID);
+    doc.setLineWidth(0.5);
+    doc.rect(xSR, y, 180, h, "S");
+    doc.line(xDesc, y, xDesc, y + h);
+    doc.line(xAmt, y, xAmt, y + h);
+    doc.setTextColor(...BLACK);
+    if (sr) doc.text(sr, centerOf(xSR, xDesc), y + h / 2 + 1.5, { align: "center" });
+    doc.text(lines, xDesc + 3, y + 5.6);
+    if (amountText) doc.text(amountText, xEnd - 3, y + h / 2 + 1.5, { align: "right" });
+    y += h;
+  };
+
+  const proDesc = isIcv
+    ? `ICV Certification & ADNOC Pre-Qualification — Professional Service Fees${services.length ? `\n(${services.join(", ")})` : ""}`
+    : `Professional Service Fees${services.length ? `\n${services.map((s) => `• ${s}`).join("\n")}` : ""}`;
+
+  bodyRow("1", proDesc, money(quote.proFees || 0));
+  bodyRow("2", "Government / Authority Fees", money(quote.govFees || 0));
+
+  // Total row (mandatory #FFFF00 highlight)
+  const tH = 9;
+  doc.setFillColor(...YELLOW);
+  doc.rect(xSR, y, 180, tH, "F");
+  doc.setDrawColor(...NAVY_MID);
+  doc.setLineWidth(0.5);
+  doc.rect(xSR, y, 180, tH, "S");
+  doc.line(xDesc, y, xDesc, y + tH);
+  doc.line(xAmt, y, xAmt, y + tH);
+  doc.setFont(FONT, "bold");
+  doc.setFontSize(10.5);
+  doc.setTextColor(...BLACK);
+  doc.text("TOTAL", centerOf(xSR, xDesc), y + 5.9, { align: "center" });
+  doc.text(money(quote.total || 0), xEnd - 3, y + 5.9, { align: "right" });
+  y += tH + 8;
+
+  // ── Required documents ──────────────────────────────────────────
+  y = sectionTitle(doc, "REQUIRED DOCUMENTS:", y);
+  y = listBlock(doc, isIcv ? REQUIRED_DOCS_ICV : REQUIRED_DOCS_STD, y, true);
+  y += 4;
+
+  // ── Terms ───────────────────────────────────────────────────────
+  y = sectionTitle(doc, "GENERAL TERMS AND CONDITIONS", y);
+  doc.setFont(FONT, "italic");
+  doc.setFontSize(9.5);
+  doc.setTextColor(...BLACK);
+  doc.text("IT IS AGREED AS FOLLOWS THAT:", MARGIN_L, y);
+  y += 5;
+  y = listBlock(doc, GENERAL_TERMS, y);
+  y += 5;
+
+  // ── Closing block ───────────────────────────────────────────────
+  doc.setFont(FONT, "normal");
+  doc.setFontSize(9.5);
+  doc.setTextColor(...GRAY_TITLE);
+  doc.text(
+    "The QUOTATION is solely prepared for the Clients of PROFESSIONAL BUSINESS SERVICES.",
+    105, y, { align: "center" }
+  );
+  y += 5;
+  doc.text("If you have any questions concerning this quotation, please contact us.", 105, y, { align: "center" });
+  y += 8;
+  doc.setFont(FONT, "bold");
+  doc.setFontSize(12);
+  doc.setTextColor(...NAVY);
+  doc.text("THANK YOU FOR YOUR BUSINESS!", 105, y, { align: "center" });
+
+  drawFooter(doc, "QUOTATION 1-1");
 
   const pdf = Buffer.from(doc.output("arraybuffer"));
   return new NextResponse(pdf, {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="quote-${quote.id.slice(0, 8)}.pdf"`
-    }
+      "Content-Disposition": `inline; filename="${isIcv ? "icv-quotation" : "quotation"}-${refNumber(quote.createdAt)}.pdf"`,
+    },
   });
 }
