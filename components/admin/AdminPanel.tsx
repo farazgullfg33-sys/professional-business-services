@@ -6,13 +6,15 @@ import { AnimatePresence, motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import {
   AlertTriangle, BarChart3, CalendarDays, CheckSquare, ClipboardList, Download, FileArchive, FileBadge,
-  FileText, FolderOpen, GripVertical, LayoutDashboard, LogOut, Menu, MessageSquareText, Plus, ReceiptText,
+  FileCheck, FileText, FolderOpen, GripVertical, LayoutDashboard, LogOut, Menu, MessageSquareText, Pencil, Plus, ReceiptText,
   RefreshCcw, ShieldCheck, Sparkles, UserCog, UsersRound, Loader2, Wallet, X
 } from "lucide-react";
 import { Button } from "@/components/Button";
+import { DocumentEditor, type DocType } from "@/components/admin/DocumentEditor";
 import { cn } from "@/lib/utils";
-import { acquisitionFunnel, leadsBySource, monthlyRevenueSeries, staffProductivity, statusBreakdown } from "@/lib/reports";
-import { AcquisitionFunnelChart, LeadsBySourceChart, RevenueTrendChart, StaffProductivityChart, StatusBreakdownChart } from "@/components/admin/Charts";
+import { leadsBySource, monthlyRevenueSeries, staffProductivity, statusBreakdown } from "@/lib/reports";
+import { LeadsBySourceChart, RevenueTrendChart, StaffProductivityChart, StatusBreakdownChart } from "@/components/admin/Charts";
+import { FunnelChart } from "@/components/admin/FunnelChart";
 import { useSSE } from "@/hooks/useSSE";
 import { AdminChatbot } from "@/components/admin/AdminChatbot";
 
@@ -48,7 +50,9 @@ const modules = [
   { name: "License Calendar", icon: CalendarDays, detail: "Calendar and list view with renewal alerts and bulk renew" },
   { name: "Attestation Pipeline", icon: FileArchive, detail: "Chain tracking per document with custody checkpoints" },
   { name: "Compliance Calendar", icon: ShieldCheck, detail: "ESR, VAT, AML, PDPL deadlines with color coding" },
-  { name: "Quotes & Invoices", icon: ReceiptText, detail: "Quote generator, quote-to-invoice conversion, payment tracking, PDF export" },
+  { name: "Quotations", icon: ReceiptText, detail: "Quotation builder with dynamic line items, history, PDF export" },
+  { name: "ICV & ADNOC", icon: FileCheck, detail: "ICV & ADNOC pre-qualification quotations with dedicated required documents" },
+  { name: "Invoices", icon: FileText, detail: "Tax invoices with 6-column table, payment tracking, PDF export" },
   { name: "Follow-ups", icon: RefreshCcw, detail: "Call, meeting, quote, negotiation reminders per client" },
   { name: "Documents", icon: FolderOpen, detail: "Upload zones, category tags, expiry tracking, bulk upload" },
   { name: "Communication Log", icon: MessageSquareText, detail: "Timestamped client communication with type filters" },
@@ -127,6 +131,7 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
   const [showAddCommLog, setShowAddCommLog] = useState(false);
   const [commLogTypeFilter, setCommLogTypeFilter] = useState("all");
   const [leadSourceFilter, setLeadSourceFilter] = useState("all");
+  const [docEditor, setDocEditor] = useState<{ docType: DocType; record: any | null } | null>(null);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [leadNoteText, setLeadNoteText] = useState("");
   const [leadPrefill, setLeadPrefill] = useState<{ name?: string; email?: string; phone?: string } | null>(null);
@@ -147,12 +152,28 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
   const alerts = useMemo(() => expiringDocuments(data?.documents), [data]);
   const revenueSeries = useMemo(() => monthlyRevenueSeries(data?.invoices), [data]);
   const pipelineBreakdown = useMemo(() => statusBreakdown(data?.services), [data]);
-  const funnel = useMemo(() => acquisitionFunnel({
-    leads: data?.counts?.leads ?? initialStats.leads,
-    quoteReqs: data?.counts?.quoteReqs ?? initialStats.quoteReqs,
-    clients: data?.counts?.clients ?? initialStats.clients,
-    completed: (data?.services ?? []).filter((s: ServiceRow) => ["completed", "delivered"].includes(s.status)).length
-  }), [data, initialStats]);
+  // 6-stage acquisition funnel from real data: Leads (Lead table) → Contacted
+  // (leads past 'new') → Meeting (ServiceRequest opened) → Proposal (quotations)
+  // → Negotiation (invoices raised) → Closed Won (invoices paid).
+  const funnelStages = useMemo(() => {
+    const leadsArr: Lead[] = data?.leads ?? [];
+    const services: ServiceRow[] = data?.services ?? [];
+    const invoices: InvoiceRow[] = data?.invoices ?? [];
+    const leads = data?.counts?.leads ?? leadsArr.length;
+    const contacted = leadsArr.filter((l) => l.status && l.status !== "new").length;
+    const meeting = data?.counts?.services ?? services.length;
+    const proposal = (data?.quotesList ?? []).length;
+    const negotiation = invoices.length;
+    const closedWon = invoices.filter((i) => i.status === "paid").length;
+    return [
+      { label: "Leads", count: leads },
+      { label: "Contacted", count: contacted },
+      { label: "Meeting", count: meeting },
+      { label: "Proposal", count: proposal },
+      { label: "Negotiation", count: negotiation },
+      { label: "Closed Won", count: closedWon },
+    ];
+  }, [data]);
   const sourceBreakdown = useMemo(() => leadsBySource(data?.leads), [data]);
   const productivity = useMemo(() => staffProductivity(data?.services), [data]);
 
@@ -380,7 +401,7 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
             </div>
             <div className="flex gap-2 flex-wrap">
               <Button onClick={()=>setShowNewClient(true)}><Plus size={16}/> New Client</Button>
-              <Button variant="outline" onClick={()=>{setShowNewQuote(true);setActive("Quotes & Invoices");}}><FileText size={16}/> New Quote</Button>
+              <Button variant="outline" onClick={()=>setDocEditor({docType:"quotation", record:null})}><FileText size={16}/> New Quote</Button>
               <Button variant="outline" onClick={exportCSV}><Download size={16}/> Export</Button>
               <Button variant="ghost" onClick={async()=>{ await createClient().auth.signOut(); window.location.href="/admin/login"; }}><LogOut size={16}/></Button>
             </div>
@@ -521,6 +542,16 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
               </>
             )}
           </AnimatePresence>
+
+          {docEditor && (
+            <DocumentEditor
+              docType={docEditor.docType}
+              clients={data?.clients ?? []}
+              record={docEditor.record}
+              onClose={() => setDocEditor(null)}
+              onSaved={fetchData}
+            />
+          )}
 
           {showNewQuote && data && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={()=>setShowNewQuote(false)}>
@@ -754,7 +785,7 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
 
                   <div className="glass-panel rounded-lg p-5 shadow-soft transition hover:border-gold/25 sm:p-6">
                     <h3 className="font-heading font-semibold text-heading text-lg">Client Acquisition Funnel</h3>
-                    <AcquisitionFunnelChart data={funnel} />
+                    <FunnelChart stages={funnelStages} />
                   </div>
 
                   <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
@@ -779,7 +810,7 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
                         <h3 className="font-heading font-semibold text-heading">Quick Actions</h3>
                         <div className="mt-3 grid gap-2">
                           <Button onClick={()=>{setShowNewClient(true)}}>New Client</Button>
-                          <Button variant="outline" onClick={()=>{setShowNewQuote(true);setActive("Quotes & Invoices")}}>Generate Quote</Button>
+                          <Button variant="outline" onClick={()=>setDocEditor({docType:"quotation", record:null})}>Generate Quote</Button>
                           <Button variant="outline" onClick={exportCSV}>Export CSV</Button>
                         </div>
                       </div>
@@ -900,10 +931,47 @@ export function AdminPanel({ role, stats: initialStats }: { role?: string; stats
                 </div>
               )}
 
-              {active==="Quotes & Invoices" && data && <div className="space-y-6">
-                <div className="glass-panel rounded-lg shadow-soft"><h3 className="px-4 py-3 font-heading font-semibold text-heading border-b border-edge">Quote Requests (Website)</h3><div className="overflow-x-auto"><table className="w-full min-w-[560px] text-sm"><thead className="bg-panel"><tr><th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Name</th><th className="px-4 py-3 hidden sm:table-cell text-left text-xs font-semibold uppercase tracking-wide text-muted">Email</th><th className="px-4 py-3 hidden sm:table-cell text-left text-xs font-semibold uppercase tracking-wide text-muted">Company</th><th className="px-4 py-3 hidden md:table-cell text-left text-xs font-semibold uppercase tracking-wide text-muted">Service</th><th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Date</th></tr></thead><tbody className="divide-y divide-edge">{data.quoteReqs?.map((q:any)=><tr key={q.id} className="transition hover:bg-panel/60"><td className="px-4 py-3 font-medium text-heading">{q.name}</td><td className="px-4 py-3 hidden sm:table-cell text-muted">{q.email}</td><td className="px-4 py-3 hidden sm:table-cell text-muted">{q.company||"-"}</td><td className="px-4 py-3 hidden md:table-cell text-muted">{q.serviceInterest||"-"}</td><td className="px-4 py-3 text-muted">{new Date(q.createdAt).toLocaleDateString()}</td></tr>)}</tbody></table></div></div>
-                <div className="glass-panel rounded-lg shadow-soft"><h3 className="px-4 py-3 font-heading font-semibold text-heading border-b border-edge">Generated Quotes</h3><div className="overflow-x-auto"><table className="w-full min-w-[560px] text-sm"><thead className="bg-panel"><tr><th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Client</th><th className="px-4 py-3 hidden sm:table-cell text-left text-xs font-semibold uppercase tracking-wide text-muted">Services</th><th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Govt</th><th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">PRO</th><th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Total</th><th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">PDF</th></tr></thead><tbody className="divide-y divide-edge">{data.quotesList?.map((q:any)=><tr key={q.id} className="transition hover:bg-panel/60"><td className="px-4 py-3 font-medium text-heading">{q.client?.name ?? "—"}</td><td className="px-4 py-3 hidden sm:table-cell text-muted text-xs">{q.services}</td><td className="px-4 py-3 text-body">AED {q.govFees}</td><td className="px-4 py-3 text-body">AED {q.proFees}</td><td className="px-4 py-3 font-bold text-heading">AED {q.total}</td><td className="px-4 py-3"><div className="flex gap-3"><a href={`/api/admin/quote/pdf?id=${q.id}`} target="_blank" className="text-gold font-semibold text-xs hover:underline">Quotation</a><a href={`/api/admin/quote/pdf?id=${q.id}&variant=icv`} target="_blank" className="text-gold font-semibold text-xs hover:underline">ICV &amp; ADNOC</a></div></td></tr>)}</tbody></table></div></div>
-                <div className="glass-panel rounded-lg shadow-soft"><h3 className="px-4 py-3 font-heading font-semibold text-heading border-b border-edge">Invoices</h3><div className="overflow-x-auto"><table className="w-full min-w-[520px] text-sm"><thead className="bg-panel"><tr><th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Invoice #</th><th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Client</th><th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Amount</th><th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Status</th><th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">PDF</th></tr></thead><tbody className="divide-y divide-edge">{data.invoices?.map((inv:any)=><tr key={inv.id} className="transition hover:bg-panel/60"><td className="px-4 py-3 font-medium text-heading">INV-{inv.id.slice(0,8)}</td><td className="px-4 py-3 text-body">{inv.quote?.client?.name ?? "—"}</td><td className="px-4 py-3 font-bold text-heading">AED {inv.amount}</td><td className="px-4 py-3"><span className={inv.status==="paid"?"bg-emerald-500/15 text-emerald-300 text-xs px-2 py-0.5 rounded-full":"bg-amber-500/15 text-amber-300 text-xs px-2 py-0.5 rounded-full"}>{inv.status}</span></td><td className="px-4 py-3"><a href={`/api/admin/invoice/pdf?id=${inv.id}`} target="_blank" className="text-gold font-semibold text-xs hover:underline">Download PDF</a></td></tr>)}</tbody></table></div></div>
+              {/* QUOTATIONS */}
+              {active==="Quotations" && data && (() => {
+                const rows = (data.quotesList ?? []).filter((q:any)=>(q.meta?.docType ?? "quotation") !== "icv");
+                return <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div><h3 className="font-heading text-lg font-semibold text-heading">Quotations</h3><p className="text-xs text-muted">Every generated quotation is kept here — download or edit anytime.</p></div>
+                    <Button onClick={()=>setDocEditor({docType:"quotation", record:null})}><Plus size={16}/> New Quotation</Button>
+                  </div>
+                  <div className="glass-panel rounded-lg shadow-soft"><div className="overflow-x-auto"><table className="w-full min-w-[640px] text-sm"><thead className="bg-panel"><tr>{["Client","Subject","Total","Date","Actions"].map(h=><th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">{h}</th>)}</tr></thead><tbody className="divide-y divide-edge">
+                    {rows.map((q:any)=><tr key={q.id} className="transition hover:bg-panel/60"><td className="px-4 py-3 font-medium text-heading">{q.client?.name ?? q.meta?.clientName ?? "—"}</td><td className="px-4 py-3 text-muted text-xs">{q.meta?.subject ?? q.services}</td><td className="px-4 py-3 font-bold text-heading">AED {Number(q.total||0).toLocaleString()}</td><td className="px-4 py-3 text-muted text-xs">{new Date(q.createdAt).toLocaleDateString()}</td><td className="px-4 py-3"><div className="flex items-center gap-3"><a href={`/api/admin/quote/pdf?id=${q.id}`} target="_blank" className="text-gold font-semibold text-xs hover:underline">PDF</a><button onClick={()=>setDocEditor({docType:"quotation", record:q})} className="inline-flex items-center gap-1 text-xs text-muted hover:text-heading"><Pencil size={13}/> Edit</button><button onClick={()=>deleteRecord(`/api/admin/quote/${q.id}`)} className="text-xs text-red-400 hover:underline">Delete</button></div></td></tr>)}
+                    {rows.length===0 && <tr><td colSpan={5} className="px-4 py-12 text-center text-muted">No quotations yet. <button onClick={()=>setDocEditor({docType:"quotation", record:null})} className="text-gold hover:underline">Create the first one.</button></td></tr>}
+                  </tbody></table></div></div>
+                  <div className="glass-panel rounded-lg shadow-soft"><h3 className="px-4 py-3 font-heading font-semibold text-heading border-b border-edge">Website Quote Requests</h3><div className="overflow-x-auto"><table className="w-full min-w-[560px] text-sm"><thead className="bg-panel"><tr>{["Name","Email","Company","Service","Date"].map(h=><th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">{h}</th>)}</tr></thead><tbody className="divide-y divide-edge">{data.quoteReqs?.map((q:any)=><tr key={q.id} className="transition hover:bg-panel/60"><td className="px-4 py-3 font-medium text-heading">{q.name}</td><td className="px-4 py-3 text-muted">{q.email}</td><td className="px-4 py-3 text-muted">{q.company||"-"}</td><td className="px-4 py-3 text-muted">{q.serviceInterest||"-"}</td><td className="px-4 py-3 text-muted">{new Date(q.createdAt).toLocaleDateString()}</td></tr>)}</tbody></table></div></div>
+                </div>;
+              })()}
+
+              {/* ICV & ADNOC */}
+              {active==="ICV & ADNOC" && data && (() => {
+                const rows = (data.quotesList ?? []).filter((q:any)=>q.meta?.docType === "icv");
+                return <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div><h3 className="font-heading text-lg font-semibold text-heading">ICV &amp; ADNOC Quotations</h3><p className="text-xs text-muted">Pre-qualification quotations with ICV-specific required documents.</p></div>
+                    <Button onClick={()=>setDocEditor({docType:"icv", record:null})}><Plus size={16}/> New ICV Quotation</Button>
+                  </div>
+                  <div className="glass-panel rounded-lg shadow-soft"><div className="overflow-x-auto"><table className="w-full min-w-[640px] text-sm"><thead className="bg-panel"><tr>{["Client","Subject","Total","Date","Actions"].map(h=><th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">{h}</th>)}</tr></thead><tbody className="divide-y divide-edge">
+                    {rows.map((q:any)=><tr key={q.id} className="transition hover:bg-panel/60"><td className="px-4 py-3 font-medium text-heading">{q.client?.name ?? q.meta?.clientName ?? "—"}</td><td className="px-4 py-3 text-muted text-xs">{q.meta?.subject ?? q.services}</td><td className="px-4 py-3 font-bold text-heading">AED {Number(q.total||0).toLocaleString()}</td><td className="px-4 py-3 text-muted text-xs">{new Date(q.createdAt).toLocaleDateString()}</td><td className="px-4 py-3"><div className="flex items-center gap-3"><a href={`/api/admin/quote/pdf?id=${q.id}&variant=icv`} target="_blank" className="text-gold font-semibold text-xs hover:underline">PDF</a><button onClick={()=>setDocEditor({docType:"icv", record:q})} className="inline-flex items-center gap-1 text-xs text-muted hover:text-heading"><Pencil size={13}/> Edit</button><button onClick={()=>deleteRecord(`/api/admin/quote/${q.id}`)} className="text-xs text-red-400 hover:underline">Delete</button></div></td></tr>)}
+                    {rows.length===0 && <tr><td colSpan={5} className="px-4 py-12 text-center text-muted">No ICV quotations yet. <button onClick={()=>setDocEditor({docType:"icv", record:null})} className="text-gold hover:underline">Create the first one.</button></td></tr>}
+                  </tbody></table></div></div>
+                </div>;
+              })()}
+
+              {/* INVOICES */}
+              {active==="Invoices" && data && <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div><h3 className="font-heading text-lg font-semibold text-heading">Tax Invoices</h3><p className="text-xs text-muted">Every invoice is kept here — download or edit anytime.</p></div>
+                  <Button onClick={()=>setDocEditor({docType:"invoice", record:null})}><Plus size={16}/> New Invoice</Button>
+                </div>
+                <div className="glass-panel rounded-lg shadow-soft"><div className="overflow-x-auto"><table className="w-full min-w-[620px] text-sm"><thead className="bg-panel"><tr>{["Invoice #","Client","Amount","Status","Date","Actions"].map(h=><th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">{h}</th>)}</tr></thead><tbody className="divide-y divide-edge">
+                  {data.invoices?.map((inv:any)=><tr key={inv.id} className="transition hover:bg-panel/60"><td className="px-4 py-3 font-medium text-heading">{inv.meta?.referenceNo || `INV-${inv.id.slice(0,8)}`}</td><td className="px-4 py-3 text-body">{inv.quote?.client?.name ?? inv.meta?.clientName ?? "—"}</td><td className="px-4 py-3 font-bold text-heading">AED {Number(inv.amount||0).toLocaleString()}</td><td className="px-4 py-3"><span className={inv.status==="paid"?"bg-emerald-500/15 text-emerald-300 text-xs px-2 py-0.5 rounded-full":"bg-amber-500/15 text-amber-300 text-xs px-2 py-0.5 rounded-full"}>{inv.status}</span></td><td className="px-4 py-3 text-muted text-xs">{new Date(inv.createdAt).toLocaleDateString()}</td><td className="px-4 py-3"><div className="flex items-center gap-3"><a href={`/api/admin/invoice/pdf?id=${inv.id}`} target="_blank" className="text-gold font-semibold text-xs hover:underline">PDF</a><button onClick={()=>setDocEditor({docType:"invoice", record:inv})} className="inline-flex items-center gap-1 text-xs text-muted hover:text-heading"><Pencil size={13}/> Edit</button><button onClick={()=>deleteRecord(`/api/admin/invoice/${inv.id}`)} className="text-xs text-red-400 hover:underline">Delete</button></div></td></tr>)}
+                  {(data.invoices?.length ?? 0)===0 && <tr><td colSpan={6} className="px-4 py-12 text-center text-muted">No invoices yet. <button onClick={()=>setDocEditor({docType:"invoice", record:null})} className="text-gold hover:underline">Create the first one.</button></td></tr>}
+                </tbody></table></div></div>
               </div>}
 
               {active==="Follow-ups" && data && <div className="glass-panel rounded-lg shadow-soft"><div className="overflow-x-auto"><table className="w-full min-w-[420px] text-sm"><thead className="bg-panel"><tr><th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Client</th><th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Step</th><th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Due</th></tr></thead><tbody className="divide-y divide-edge">{data.followUps?.map((f:FollowUp)=><tr key={f.id} className="transition hover:bg-panel/60"><td className="px-4 py-3 font-medium text-heading">{f.client?.name ?? "—"}</td><td className="px-4 py-3 text-body">{f.step}</td><td className="px-4 py-3 text-muted">{new Date(f.dueDate).toLocaleDateString()}</td></tr>)}</tbody></table></div></div>}

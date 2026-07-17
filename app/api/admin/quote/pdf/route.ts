@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { normalizeItems, sumAmount, type LineItem, type DocMeta } from "@/lib/documents";
 import {
   NAVY, NAVY_MID, HEADER_BG, YELLOW, BLACK, GRAY_TITLE,
   MARGIN_L, MARGIN_R, money, refNumber, formatDate,
@@ -30,52 +31,61 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
-  const variant = searchParams.get("variant"); // "icv" → ICV & ADNOC Pre-Qualification
+  const variantParam = searchParams.get("variant");
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
   const db = createAdminClient();
-  const { data: quote, error } = await db
-    .from("Quote")
-    .select("*, Client(*)")
-    .eq("id", id)
-    .single();
-
+  const { data: quote, error } = await db.from("Quote").select("*, Client(*)").eq("id", id).single();
   if (error || !quote) return NextResponse.json({ error: "Quote not found" }, { status: 404 });
 
-  const isIcv = variant === "icv";
-  const subject = isIcv ? "ICV & ADNOC Pre-Qualification" : "Business Services Quotation";
+  const meta = (quote.meta ?? {}) as DocMeta;
+  const isIcv = variantParam === "icv" || meta.docType === "icv";
   const client = quote.Client ?? {};
-  const services: string[] = String(quote.services || "")
-    .split(",").map((s) => s.trim()).filter(Boolean);
+
+  // Prefer stored line items; fall back to legacy fees for old records.
+  let items: LineItem[] = normalizeItems(quote.lineItems);
+  if (items.length === 0) {
+    items = [
+      { description: quote.services || "Professional Services", quantity: 1, unitPrice: quote.proFees || 0, amount: quote.proFees || 0 },
+      { description: "Government / Authority Fees", quantity: 1, unitPrice: quote.govFees || 0, amount: quote.govFees || 0 },
+    ];
+  }
+  const total = quote.total || sumAmount(items);
+
+  const clientName = meta.clientName || client.name || "-";
+  const company = meta.company || client.company || "-";
+  const address = meta.address || client.address || "Abu Dhabi, UAE";
+  const contact = meta.contact || client.phone || "-";
+  const subject = meta.subject || (isIcv ? "ICV & ADNOC Pre-Qualification" : "Business Services Quotation");
+  const reference = meta.referenceNo || refNumber(quote.createdAt);
 
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "mm", format: "a4" });
 
   drawHeader(doc, "QUOTATION");
 
-  // ── Client info block (two columns, no border) ──────────────────
+  // ── Client info block (two columns) ─────────────────────────────
   let y = 42;
   const L = (t: string, x: number, yy: number) => { doc.setFont(FONT, "bold"); doc.setTextColor(...BLACK); doc.setFontSize(9.5); doc.text(t, x, yy); };
   const V = (t: string, x: number, yy: number) => { doc.setFont(FONT, "normal"); doc.setTextColor(...BLACK); doc.setFontSize(9.5); doc.text(t || "-", x, yy); };
 
-  L("Name:", MARGIN_L, y);            V(client.name || "-", MARGIN_L + 28, y);
+  L("Name:", MARGIN_L, y);            V(clientName, MARGIN_L + 28, y);
   L("DATE:", 120, y);                 V(formatDate(quote.createdAt), 150, y);
   y += 6;
-  L("Company Name:", MARGIN_L, y);    V(client.company || "-", MARGIN_L + 28, y);
-  L("Reference #:", 120, y);          V(refNumber(quote.createdAt), 150, y);
+  L("Company Name:", MARGIN_L, y);    V(company, MARGIN_L + 28, y);
+  L("Reference #:", 120, y);          V(reference, 150, y);
   y += 6;
-  L("Address:", MARGIN_L, y);         V(client.address || "Abu Dhabi, UAE", MARGIN_L + 28, y);
-  L("Client's ID:", 120, y);          V("-", 150, y);
+  L("Address:", MARGIN_L, y);         V(address, MARGIN_L + 28, y);
+  L("Client's ID:", 120, y);          V(meta.clientRefId || "-", 150, y);
   y += 6;
-  L("Contact no.:", MARGIN_L, y);     V(client.phone || "-", MARGIN_L + 28, y);
+  L("Contact no.:", MARGIN_L, y);     V(contact, MARGIN_L + 28, y);
   L("Subject:", 120, y);              V(subject, 150, y);
   y += 10;
 
-  // ── Quotation table (3 columns) ─────────────────────────────────
+  // ── Quotation table (3 columns: S.R.NO | DESCRIPTION | AMOUNT) ───
   const xSR = MARGIN_L, xDesc = 42, xAmt = 159, xEnd = MARGIN_R;
   const centerOf = (a: number, b: number) => (a + b) / 2;
 
-  // Header row (#DCE6F1 fill, navy bold, centered)
   const hH = 9;
   doc.setFillColor(...HEADER_BG);
   doc.rect(xSR, y, 180, hH, "F");
@@ -92,7 +102,6 @@ export async function GET(request: Request) {
   doc.text("AMOUNT", centerOf(xAmt, xEnd), y + 5.9, { align: "center" });
   y += hH;
 
-  // Body rows
   const bodyRow = (sr: string, descText: string, amountText: string) => {
     doc.setFont(FONT, "normal");
     doc.setFontSize(9.5);
@@ -110,12 +119,10 @@ export async function GET(request: Request) {
     y += h;
   };
 
-  const proDesc = isIcv
-    ? `ICV Certification & ADNOC Pre-Qualification — Professional Service Fees${services.length ? `\n(${services.join(", ")})` : ""}`
-    : `Professional Service Fees${services.length ? `\n${services.map((s) => `• ${s}`).join("\n")}` : ""}`;
-
-  bodyRow("1", proDesc, money(quote.proFees || 0));
-  bodyRow("2", "Government / Authority Fees", money(quote.govFees || 0));
+  items.forEach((it, i) => {
+    const qtyNote = (it.quantity && it.quantity > 1) ? `   (${it.quantity} × ${money(it.unitPrice || 0)})` : "";
+    bodyRow(String(i + 1), `${it.description}${qtyNote}`, money(it.amount || 0));
+  });
 
   // Total row (mandatory #FFFF00 highlight)
   const tH = 9;
@@ -130,7 +137,7 @@ export async function GET(request: Request) {
   doc.setFontSize(10.5);
   doc.setTextColor(...BLACK);
   doc.text("TOTAL", centerOf(xSR, xDesc), y + 5.9, { align: "center" });
-  doc.text(money(quote.total || 0), xEnd - 3, y + 5.9, { align: "right" });
+  doc.text(money(total), xEnd - 3, y + 5.9, { align: "right" });
   y += tH + 8;
 
   // ── Required documents ──────────────────────────────────────────
@@ -152,10 +159,7 @@ export async function GET(request: Request) {
   doc.setFont(FONT, "normal");
   doc.setFontSize(9.5);
   doc.setTextColor(...GRAY_TITLE);
-  doc.text(
-    "The QUOTATION is solely prepared for the Clients of PROFESSIONAL BUSINESS SERVICES.",
-    105, y, { align: "center" }
-  );
+  doc.text("The QUOTATION is solely prepared for the Clients of PROFESSIONAL BUSINESS SERVICES.", 105, y, { align: "center" });
   y += 5;
   doc.text("If you have any questions concerning this quotation, please contact us.", 105, y, { align: "center" });
   y += 8;
@@ -170,7 +174,7 @@ export async function GET(request: Request) {
   return new NextResponse(pdf, {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="${isIcv ? "icv-quotation" : "quotation"}-${refNumber(quote.createdAt)}.pdf"`,
+      "Content-Disposition": `inline; filename="${isIcv ? "icv-quotation" : "quotation"}-${reference}.pdf"`,
     },
   });
 }
