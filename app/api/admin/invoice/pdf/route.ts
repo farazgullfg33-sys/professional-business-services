@@ -5,7 +5,7 @@ import { normalizeItems, sumAmount, sumPaid, type LineItem, type DocMeta } from 
 import {
   NAVY, NAVY_MID, YELLOW, BLACK, WHITE, GRAY_TITLE,
   MARGIN_L, MARGIN_R, refNumber, formatDate,
-  drawHeader, sectionTitle, listBlock, GENERAL_TERMS, FONT,
+  drawHeader, sectionTitle, listBlock, GENERAL_TERMS, FONT, FS,
   pageBreak, paginateFooters,
 } from "@/lib/pdf/brand";
 
@@ -86,19 +86,22 @@ export async function GET(request: Request) {
     const ry = y + i * mRowH;
     doc.rect(mx, ry, mW, mRowH, "S");
     doc.line(mx + mLabelW, ry, mx + mLabelW, ry + mRowH);
-    doc.setFont(FONT, "bold"); doc.setFontSize(8.5); doc.setTextColor(...NAVY);
+    doc.setFont(FONT, "bold"); doc.setFontSize(FS.dense); doc.setTextColor(...NAVY);
     doc.text(r[0], mx + 2, ry + 4.7);
     doc.setFont(FONT, "normal"); doc.setTextColor(...BLACK);
     doc.text(r[1], mx + mLabelW + 2, ry + 4.7);
   });
 
-  y += 11;
+  y += 12;
+  // Values are clipped to the label gutter so a long address can't run under
+  // the mini date table on the right.
   const field = (label: string, value: string) => {
-    doc.setFont(FONT, "bold"); doc.setFontSize(9.5); doc.setTextColor(...BLACK);
+    doc.setFont(FONT, "bold"); doc.setFontSize(FS.body); doc.setTextColor(...BLACK);
     doc.text(label, MARGIN_L, y);
     doc.setFont(FONT, "normal");
-    doc.text(value || "-", MARGIN_L + 26, y);
-    y += 5.6;
+    const lines = doc.splitTextToSize(value || "-", 110 - 26) as string[];
+    doc.text(lines, MARGIN_L + 26, y);
+    y += (lines.length - 1) * 5 + 6.5;
   };
   field("Name:", clientName);
   field("Company:", company);
@@ -108,110 +111,132 @@ export async function GET(request: Request) {
   y += 4;
 
   // ── Invoice table (6 columns) ───────────────────────────────────
+  // Widths follow the reference exactly: 38% / 10% / 13% / 10% / 13% / 16%
+  // of the 180mm content width.
   const x0 = MARGIN_L;
-  const xRef = x0 + 68.4;
-  const xQuote = xRef + 18;
-  const xPaid = xQuote + 23.4;
-  const xExp = xPaid + 18;
-  const xBal = xExp + 23.4;
-  const xEnd = MARGIN_R;
+  const W = MARGIN_R - x0; // 180
+  const xRef = x0 + W * 0.38;   // 68.4
+  const xQuote = xRef + W * 0.1;  // 18
+  const xPaid = xQuote + W * 0.13; // 23.4
+  const xExp = xPaid + W * 0.1;   // 18
+  const xBal = xExp + W * 0.13;   // 23.4
+  const xEnd = MARGIN_R;          // remaining 16% = 28.8
   const cols = [x0, xRef, xQuote, xPaid, xExp, xBal, xEnd];
   const mid = (i: number) => (cols[i] + cols[i + 1]) / 2;
   const vlines = (yy: number, h: number) => { for (let i = 1; i < 6; i++) doc.line(cols[i], yy, cols[i], yy + h); };
 
-  // Header (navy fill, white bold)
-  const hH = 10;
-  doc.setFillColor(...NAVY);
-  doc.rect(x0, y, MARGIN_R - x0, hH, "F");
-  doc.setDrawColor(...NAVY_MID);
-  doc.setLineWidth(0.5);
-  doc.rect(x0, y, MARGIN_R - x0, hH, "S");
-  doc.setDrawColor(...WHITE);
-  doc.setLineWidth(0.3);
-  vlines(y, hH);
-  doc.setFont(FONT, "bold");
-  doc.setFontSize(7.6);
-  doc.setTextColor(...WHITE);
-  ["DESCRIPTION", "REF NUM", "AMT QUOTE", "AMT PAID", "EXPENCE", "BALANCE"].forEach((h, i) =>
-    doc.text(h, mid(i), y + 6.2, { align: "center" })
-  );
-  y += hH;
+  // Cell padding — keeps text off the column rules. Numeric columns get a
+  // tighter pad because the 10%-wide AMT PAID column has only ~14mm to spare.
+  const PAD = 3;
+  const NPAD = 2;
 
-  // One row per line item
-  doc.setFontSize(8.5);
-  items.forEach((it) => {
-    doc.setFont(FONT, "normal");
-    const descLines = doc.splitTextToSize(it.description || "-", (xRef - x0) - 5) as string[];
-    const rowH = Math.max(10, descLines.length * 5 + 5);
-    // Keep the row whole — start a new page rather than clipping it.
-    y = pageBreak(doc, y, rowH);
+  // Header (navy fill, white bold). Redrawn at the top of every page the
+  // table spills onto, so a continued table is never headerless.
+  const hH = 10;
+  const drawTableHead = (yy: number): number => {
+    doc.setFillColor(...NAVY);
+    doc.rect(x0, yy, W, hH, "F");
     doc.setDrawColor(...NAVY_MID);
     doc.setLineWidth(0.5);
-    doc.rect(x0, y, MARGIN_R - x0, rowH, "S");
+    doc.rect(x0, yy, W, hH, "S");
+    doc.setDrawColor(...WHITE);
+    doc.setLineWidth(0.3);
+    vlines(yy, hH);
+    doc.setFont(FONT, "bold");
+    doc.setFontSize(FS.denseHead);
+    doc.setTextColor(...WHITE);
+    ["DESCRIPTION", "REF NUM", "AMT QUOTE", "AMT PAID", "EXPENCE", "BALANCE"].forEach((h, i) =>
+      doc.text(h, mid(i), yy + 6.4, { align: "center" })
+    );
+    return yy + hH;
+  };
+  y = drawTableHead(y);
+
+  // One row per line item
+  items.forEach((it) => {
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(FS.dense);
+    const descLines = doc.splitTextToSize(it.description || "-", (xRef - x0) - PAD * 2) as string[];
+    const rowH = Math.max(10, descLines.length * 5.5 + 4.5);
+    // Keep the row whole — start a new page (and repeat the head) rather than
+    // clipping it.
+    const yBefore = y;
+    y = pageBreak(doc, y, rowH);
+    if (y !== yBefore) y = drawTableHead(y);
+    doc.setDrawColor(...NAVY_MID);
+    doc.setLineWidth(0.5);
+    doc.rect(x0, y, W, rowH, "S");
     vlines(y, rowH);
     doc.setTextColor(...BLACK);
-    doc.text(descLines, x0 + 2.5, y + 5.3);
-    const cy = y + rowH / 2 + 1.3;
+    doc.text(descLines, x0 + PAD, y + 5.6);
+    const cy = y + rowH / 2 + 1.5;
     const bal = (Number(it.amount) || 0) - (Number(it.amtPaid) || 0);
     doc.text(it.refNum || "-", mid(1), cy, { align: "center" });
-    doc.text(amt(it.amount || 0), cols[3] - 2, cy, { align: "right" });
-    doc.text(amt(it.amtPaid || 0), cols[4] - 2, cy, { align: "right" });
-    doc.text(amt(it.expense || 0), cols[5] - 2, cy, { align: "right" });
-    doc.text(amt(bal), xEnd - 2, cy, { align: "right" });
+    doc.text(amt(it.amount || 0), cols[3] - NPAD, cy, { align: "right" });
+    doc.text(amt(it.amtPaid || 0), cols[4] - NPAD, cy, { align: "right" });
+    doc.text(amt(it.expense || 0), cols[5] - NPAD, cy, { align: "right" });
+    doc.text(amt(bal), xEnd - NPAD, cy, { align: "right" });
     y += rowH;
   });
 
-  // Total row (mandatory #FFFF00 highlight)
-  const tH = 9;
-  y = pageBreak(doc, y, tH + 11);
+  // Total row (mandatory #FFFF00 highlight) — kept with the table head.
+  const tH = 10;
+  const yBeforeTotal = y;
+  y = pageBreak(doc, y, tH);
+  if (y !== yBeforeTotal) y = drawTableHead(y);
   doc.setFillColor(...YELLOW);
-  doc.rect(x0, y, MARGIN_R - x0, tH, "F");
+  doc.rect(x0, y, W, tH, "F");
   doc.setDrawColor(...NAVY_MID);
   doc.setLineWidth(0.5);
-  doc.rect(x0, y, MARGIN_R - x0, tH, "S");
+  doc.rect(x0, y, W, tH, "S");
   vlines(y, tH);
   doc.setFont(FONT, "bold");
-  doc.setFontSize(8.6);
+  doc.setFontSize(FS.dense);
   doc.setTextColor(...BLACK);
-  doc.text("TOTAL", x0 + 3, y + 5.8);
-  doc.text(amt(totalQuote), cols[3] - 2, y + 5.8, { align: "right" });
-  doc.text(amt(totalPaid), cols[4] - 2, y + 5.8, { align: "right" });
-  doc.text(amt(totalExpense), cols[5] - 2, y + 5.8, { align: "right" });
-  doc.text(amt(totalBalance), xEnd - 2, y + 5.8, { align: "right" });
-  y += tH + 3;
+  doc.text("TOTAL", x0 + PAD, y + 6.4);
+  doc.text(amt(totalQuote), cols[3] - NPAD, y + 6.4, { align: "right" });
+  doc.text(amt(totalPaid), cols[4] - NPAD, y + 6.4, { align: "right" });
+  doc.text(amt(totalExpense), cols[5] - NPAD, y + 6.4, { align: "right" });
+  doc.text(amt(totalBalance), xEnd - NPAD, y + 6.4, { align: "right" });
+  y += tH + 4;
 
+  y = pageBreak(doc, y, 6);
   doc.setFont(FONT, "italic");
-  doc.setFontSize(8);
+  doc.setFontSize(FS.small);
   doc.setTextColor(...GRAY_TITLE);
   doc.text("All amounts in AED. 5% VAT applicable as per UAE FTA regulations.", MARGIN_R, y, { align: "right" });
-  y += 8;
+  y += 10;
 
   // ── Terms ───────────────────────────────────────────────────────
-  // Terms + signature travel together; ~70mm keeps them off the footer.
-  y = pageBreak(doc, y, 70);
-  y = sectionTitle(doc, "GENERAL TERMS AND CONDITIONS", y);
+  // The title reserves room for the first couple of bullets; listBlock breaks
+  // the rest itself.
+  y = sectionTitle(doc, "GENERAL TERMS AND CONDITIONS", y, 24);
   y = listBlock(doc, GENERAL_TERMS, y);
-  y += 6;
+  y += 8;
 
   // ── Signature block ─────────────────────────────────────────────
   // Follows the terms instead of a fixed y=250, which used to overlap them.
-  const sigY = pageBreak(doc, y, 20);
+  // 34mm covers the label, the rule 12mm below it, the cheque line and the
+  // centered closing underneath.
+  const sigY = pageBreak(doc, y, 34);
   doc.setFont(FONT, "bold");
-  doc.setFontSize(9.5);
+  doc.setFontSize(FS.body);
   doc.setTextColor(...BLACK);
   doc.text("Signature & Company Stamp :", MARGIN_L, sigY);
   doc.setDrawColor(...BLACK);
   doc.setLineWidth(0.3);
   doc.line(MARGIN_L, sigY + 12, MARGIN_L + 70, sigY + 12);
   doc.setFont(FONT, "normal");
-  doc.setFontSize(8.5);
+  doc.setFontSize(FS.dense);
   doc.setTextColor(...GRAY_TITLE);
-  doc.text("Make all cheques payable to Professional Business Services.", MARGIN_L, sigY + 17);
+  doc.text("Make all cheques payable to Professional Business Services.", MARGIN_L, sigY + 18);
 
+  // Centered closing sits on the signature line's row, clear of the 70mm rule
+  // on the left.
   doc.setFont(FONT, "bold");
-  doc.setFontSize(12);
+  doc.setFontSize(FS.closing);
   doc.setTextColor(...NAVY);
-  doc.text("THANK YOU FOR YOUR BUSINESS!", 105, sigY + 5, { align: "center" });
+  doc.text("THANK YOU FOR YOUR BUSINESS!", 105, sigY + 30, { align: "center" });
 
   paginateFooters(doc, "TAX INVOICE");
 
