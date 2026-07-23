@@ -5,7 +5,8 @@ import { normalizeItems, sumAmount, sumPaid, type LineItem, type DocMeta } from 
 import {
   NAVY, NAVY_MID, YELLOW, BLACK, WHITE, GRAY_TITLE,
   MARGIN_L, MARGIN_R, refNumber, formatDate,
-  drawHeader, drawFooter, sectionTitle, listBlock, GENERAL_TERMS, FONT,
+  drawHeader, sectionTitle, listBlock, GENERAL_TERMS, FONT,
+  pageBreak, paginateFooters,
 } from "@/lib/pdf/brand";
 
 // Compact amount (no "AED " prefix) for the narrow 6-column invoice cells.
@@ -141,7 +142,9 @@ export async function GET(request: Request) {
   items.forEach((it) => {
     doc.setFont(FONT, "normal");
     const descLines = doc.splitTextToSize(it.description || "-", (xRef - x0) - 5) as string[];
-    const rowH = Math.max(8, descLines.length * 4.2 + 3.6);
+    const rowH = Math.max(10, descLines.length * 5 + 5);
+    // Keep the row whole — start a new page rather than clipping it.
+    y = pageBreak(doc, y, rowH);
     doc.setDrawColor(...NAVY_MID);
     doc.setLineWidth(0.5);
     doc.rect(x0, y, MARGIN_R - x0, rowH, "S");
@@ -160,6 +163,7 @@ export async function GET(request: Request) {
 
   // Total row (mandatory #FFFF00 highlight)
   const tH = 9;
+  y = pageBreak(doc, y, tH + 11);
   doc.setFillColor(...YELLOW);
   doc.rect(x0, y, MARGIN_R - x0, tH, "F");
   doc.setDrawColor(...NAVY_MID);
@@ -183,12 +187,15 @@ export async function GET(request: Request) {
   y += 8;
 
   // ── Terms ───────────────────────────────────────────────────────
+  // Terms + signature travel together; ~70mm keeps them off the footer.
+  y = pageBreak(doc, y, 70);
   y = sectionTitle(doc, "GENERAL TERMS AND CONDITIONS", y);
   y = listBlock(doc, GENERAL_TERMS, y);
   y += 6;
 
-  // ── Signature block (bottom-left) ───────────────────────────────
-  const sigY = Math.max(y, 250);
+  // ── Signature block ─────────────────────────────────────────────
+  // Follows the terms instead of a fixed y=250, which used to overlap them.
+  const sigY = pageBreak(doc, y, 20);
   doc.setFont(FONT, "bold");
   doc.setFontSize(9.5);
   doc.setTextColor(...BLACK);
@@ -206,7 +213,7 @@ export async function GET(request: Request) {
   doc.setTextColor(...NAVY);
   doc.text("THANK YOU FOR YOUR BUSINESS!", 105, sigY + 5, { align: "center" });
 
-  drawFooter(doc, "TAX INVOICE 1-1");
+  paginateFooters(doc, "TAX INVOICE");
 
   const pdf = Buffer.from(doc.output("arraybuffer"));
   return new NextResponse(pdf, {

@@ -107,6 +107,31 @@ export function drawFooter(doc: jsPDF, pageLabel: string) {
   );
 }
 
+// ── Pagination helpers ────────────────────────────────────────────
+// Content must stop above the footer rule (y=285). 270 leaves room for a
+// last line plus its descenders before the rule.
+export const CONTENT_BOTTOM = 270;
+export const PAGE_TOP = 22; // first baseline on a continuation page
+
+// Starts a new page when the next block (height `needed`) would overflow.
+// Returns the y to keep drawing at.
+export function pageBreak(doc: jsPDF, y: number, needed = 0): number {
+  if (y + needed > CONTENT_BOTTOM) {
+    doc.addPage();
+    return PAGE_TOP;
+  }
+  return y;
+}
+
+// Stamps "<LABEL> n-total" on every page. Call once, after all content.
+export function paginateFooters(doc: jsPDF, label: string) {
+  const total = doc.getNumberOfPages();
+  for (let i = 1; i <= total; i++) {
+    doc.setPage(i);
+    drawFooter(doc, `${label} ${i}-${total}`);
+  }
+}
+
 // ── Terms & closing shared blocks ─────────────────────────────────
 export const GENERAL_TERMS: string[] = [
   "5% VAT will be shown in the invoice receipt as per UAE FTA regulations.",
@@ -138,7 +163,7 @@ export function listBlock(doc: jsPDF, items: string[], y: number, numbered = fal
     const lines = doc.splitTextToSize(item, CONTENT_W - 8) as string[];
     doc.text(marker, MARGIN_L + 1, y);
     doc.text(lines, MARGIN_L + 7, y);
-    y += lines.length * 4.6 + 1.4;
+    y += lines.length * 5.2 + 2.6;
   });
   return y;
 }

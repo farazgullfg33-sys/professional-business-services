@@ -5,7 +5,8 @@ import { normalizeItems, sumAmount, type LineItem, type DocMeta } from "@/lib/do
 import {
   NAVY, NAVY_MID, HEADER_BG, YELLOW, BLACK, GRAY_TITLE,
   MARGIN_L, MARGIN_R, money, refNumber, formatDate,
-  drawHeader, drawFooter, sectionTitle, listBlock, GENERAL_TERMS, FONT,
+  drawHeader, sectionTitle, listBlock, GENERAL_TERMS, FONT,
+  pageBreak, paginateFooters,
 } from "@/lib/pdf/brand";
 
 const REQUIRED_DOCS_STD = [
@@ -106,7 +107,9 @@ export async function GET(request: Request) {
     doc.setFont(FONT, "normal");
     doc.setFontSize(9.5);
     const lines = doc.splitTextToSize(descText, (xAmt - xDesc) - 6) as string[];
-    const h = Math.max(8, lines.length * 4.7 + 3.4);
+    const h = Math.max(10, lines.length * 5.4 + 5);
+    // Keep the row whole — start a new page rather than clipping it.
+    y = pageBreak(doc, y, h);
     doc.setDrawColor(...NAVY_MID);
     doc.setLineWidth(0.5);
     doc.rect(xSR, y, 180, h, "S");
@@ -126,6 +129,7 @@ export async function GET(request: Request) {
 
   // Total row (mandatory #FFFF00 highlight)
   const tH = 9;
+  y = pageBreak(doc, y, tH);
   doc.setFillColor(...YELLOW);
   doc.rect(xSR, y, 180, tH, "F");
   doc.setDrawColor(...NAVY_MID);
@@ -141,11 +145,13 @@ export async function GET(request: Request) {
   y += tH + 8;
 
   // ── Required documents ──────────────────────────────────────────
+  y = pageBreak(doc, y, 45);
   y = sectionTitle(doc, "REQUIRED DOCUMENTS:", y);
   y = listBlock(doc, isIcv ? REQUIRED_DOCS_ICV : REQUIRED_DOCS_STD, y, true);
   y += 4;
 
   // ── Terms ───────────────────────────────────────────────────────
+  y = pageBreak(doc, y, 45);
   y = sectionTitle(doc, "GENERAL TERMS AND CONDITIONS", y);
   doc.setFont(FONT, "italic");
   doc.setFontSize(9.5);
@@ -156,6 +162,7 @@ export async function GET(request: Request) {
   y += 5;
 
   // ── Closing block ───────────────────────────────────────────────
+  y = pageBreak(doc, y, 22);
   doc.setFont(FONT, "normal");
   doc.setFontSize(9.5);
   doc.setTextColor(...GRAY_TITLE);
@@ -168,7 +175,7 @@ export async function GET(request: Request) {
   doc.setTextColor(...NAVY);
   doc.text("THANK YOU FOR YOUR BUSINESS!", 105, y, { align: "center" });
 
-  drawFooter(doc, "QUOTATION 1-1");
+  paginateFooters(doc, "QUOTATION");
 
   const pdf = Buffer.from(doc.output("arraybuffer"));
   return new NextResponse(pdf, {
