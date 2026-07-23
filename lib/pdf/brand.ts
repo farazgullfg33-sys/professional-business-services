@@ -6,11 +6,11 @@
 
 import type { jsPDF } from "jspdf";
 
-// ── Brand colors (RGB) ────────────────────────────────────────────
-export const NAVY: [number, number, number] = [31, 56, 100]; // #1F3864
-export const NAVY_MID: [number, number, number] = [46, 83, 149]; // #2E5395 borders
+// ── Brand colors — PRO brand: navy #0a1628, gold #c9a84c ──────────
+export const NAVY: [number, number, number] = [10, 22, 40]; // #0a1628
+export const NAVY_MID: [number, number, number] = [20, 45, 80]; // #142D50 borders
+export const GOLD: [number, number, number] = [201, 168, 76]; // #c9a84c
 export const GRAY_TITLE: [number, number, number] = [128, 128, 128]; // #808080
-export const ORANGE: [number, number, number] = [245, 166, 35]; // #F5A623
 export const HEADER_BG: [number, number, number] = [220, 230, 241]; // #DCE6F1
 export const YELLOW: [number, number, number] = [255, 255, 0]; // #FFFF00
 export const FOOTER_GRAY: [number, number, number] = [89, 89, 89]; // #595959
@@ -61,24 +61,35 @@ export function formatDate(dateISO?: string): string {
   return d.toLocaleDateString("en-GB"); // dd/mm/yyyy — matches reference
 }
 
-// ── Logo: orange circle + white handshake abstraction ─────────────
-function drawLogo(doc: jsPDF, cx: number, cy: number, r: number) {
-  doc.setFillColor(...ORANGE);
-  doc.circle(cx, cy, r, "F");
-  doc.setDrawColor(...WHITE);
-  doc.setLineWidth(0.8);
-  doc.circle(cx, cy, r - 1.6, "S");
-  // Two white arrows meeting in the center — a clean "handshake / deal" mark.
-  doc.setFillColor(...WHITE);
-  doc.triangle(cx - 6.5, cy, cx - 1, cy - 3.6, cx - 1, cy + 3.6, "F");
-  doc.triangle(cx + 6.5, cy, cx + 1, cy - 3.6, cx + 1, cy + 3.6, "F");
-  doc.setFillColor(...WHITE);
-  doc.rect(cx - 1.4, cy - 1.4, 2.8, 2.8, "F");
+// ── Logo: PRO brand logo from public/pro-logo.png ──────────────────
+// jsPDF addImage needs base64 or URL. In Node (server-side PDF gen) we
+// read the file from the public/ directory.
+import { readFileSync } from "fs";
+import { join } from "path";
+
+let _logoBase64: string | null = null;
+function getLogoBase64(): string {
+  if (_logoBase64) return _logoBase64;
+  try {
+    const buf = readFileSync(join(process.cwd(), "public", "pro-logo.png"));
+    _logoBase64 = buf.toString("base64");
+  } catch {
+    // fallback: return empty, drawLogo becomes a no-op
+    _logoBase64 = "";
+  }
+  return _logoBase64;
+}
+
+function drawLogo(doc: jsPDF, x: number, y: number, w: number) {
+  const b64 = getLogoBase64();
+  if (!b64) return;
+  // Maintain aspect ratio (256x256 = 1:1)
+  doc.addImage(b64, "PNG", x, y, w, w);
 }
 
 // ── Header (every document): logo + navy wordmark + gray title ────
 export function drawHeader(doc: jsPDF, title: string) {
-  drawLogo(doc, 24, 20, 11);
+  drawLogo(doc, 15, 10, 18);
 
   doc.setFont(FONT, "bold");
   doc.setTextColor(...NAVY);
