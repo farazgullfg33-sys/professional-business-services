@@ -26,6 +26,23 @@ export const CONTENT_W = MARGIN_R - MARGIN_L; // 180
 
 const FONT = "helvetica"; // jsPDF's Arial-equivalent core font
 
+// ── Font sizes (shared by all three templates) ────────────────────
+// Every document pulls from this table so a Quotation, an ICV Quotation and
+// an Invoice render at identical weights. The 6-column invoice table is the
+// only place that drops to `dense` — six columns don't fit at `body`.
+export const FS = {
+  title: 30,      // document title (top-right, gray)
+  wordmark: 15,   // "PROFESSIONAL BUSINESS SERVICES"
+  section: 11,    // section titles
+  tableHead: 10,  // 3-column table header
+  total: 10.5,    // total row
+  body: 9.5,      // body copy, fields, list items, table cells
+  dense: 8.5,     // 6-column invoice table cells
+  denseHead: 8,   // 6-column invoice table header
+  small: 8,       // footnotes, footer, tagline
+  closing: 12,    // "THANK YOU FOR YOUR BUSINESS!"
+} as const;
+
 // ── Money: "AED #,###.00" everywhere ──────────────────────────────
 export function money(n: number): string {
   const v = Number.isFinite(n) ? n : 0;
@@ -65,7 +82,7 @@ export function drawHeader(doc: jsPDF, title: string) {
 
   doc.setFont(FONT, "bold");
   doc.setTextColor(...NAVY);
-  doc.setFontSize(15);
+  doc.setFontSize(FS.wordmark);
   doc.text("PROFESSIONAL BUSINESS", 40, 16);
   doc.text("SERVICES", 40, 23.5);
 
@@ -76,7 +93,7 @@ export function drawHeader(doc: jsPDF, title: string) {
 
   // Document title, top-right, large, all caps, gray.
   doc.setFont(FONT, "bold");
-  doc.setFontSize(30);
+  doc.setFontSize(FS.title);
   doc.setTextColor(...GRAY_TITLE);
   doc.text(title.toUpperCase(), MARGIN_R, 22, { align: "right" });
 
@@ -93,7 +110,7 @@ export function drawFooter(doc: jsPDF, pageLabel: string) {
   doc.line(MARGIN_L, 285, MARGIN_R, 285);
 
   doc.setFont(FONT, "italic");
-  doc.setFontSize(8);
+  doc.setFontSize(FS.small);
   doc.setTextColor(...FOOTER_GRAY);
   doc.text(pageLabel, MARGIN_L, 290);
 
@@ -140,30 +157,39 @@ export const GENERAL_TERMS: string[] = [
   "This quotation is valid for 15 days from the date of issue.",
 ];
 
-// Draws a bold, underlined section title. Returns the new y.
-export function sectionTitle(doc: jsPDF, title: string, y: number): number {
+// Line height / gap for list items. Loose enough that descenders in one line
+// never touch the cap-height of the next — the old 5.2/2.6 pair collided.
+export const LIST_LINE_H = 5.5;
+export const LIST_GAP = 2.0;
+
+// Draws a bold, underlined section title. Never leaves the title orphaned at
+// the bottom of a page — `needed` reserves room for the block that follows.
+export function sectionTitle(doc: jsPDF, title: string, y: number, needed = 14): number {
+  y = pageBreak(doc, y, needed);
   doc.setFont(FONT, "bold");
-  doc.setFontSize(11);
+  doc.setFontSize(FS.section);
   doc.setTextColor(...NAVY);
   doc.text(title, MARGIN_L, y);
   const w = doc.getTextWidth(title);
   doc.setDrawColor(...NAVY);
   doc.setLineWidth(0.3);
   doc.line(MARGIN_L, y + 1.2, MARGIN_L + w, y + 1.2);
-  return y + 6;
+  return y + 7;
 }
 
-// Draws bulleted/numbered lines. Returns the new y.
+// Draws bulleted/numbered lines, breaking pages between items so a long list
+// never runs past the footer rule. Returns the new y.
 export function listBlock(doc: jsPDF, items: string[], y: number, numbered = false): number {
-  doc.setFont(FONT, "normal");
-  doc.setFontSize(9.5);
-  doc.setTextColor(...BLACK);
   items.forEach((item, i) => {
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(FS.body);
+    doc.setTextColor(...BLACK);
     const marker = numbered ? `${i + 1}.` : "•";
-    const lines = doc.splitTextToSize(item, CONTENT_W - 8) as string[];
+    const lines = doc.splitTextToSize(item, CONTENT_W - 10) as string[];
+    y = pageBreak(doc, y, lines.length * LIST_LINE_H);
     doc.text(marker, MARGIN_L + 1, y);
-    doc.text(lines, MARGIN_L + 7, y);
-    y += lines.length * 5.2 + 2.6;
+    doc.text(lines, MARGIN_L + 8, y);
+    y += lines.length * LIST_LINE_H + LIST_GAP;
   });
   return y;
 }
