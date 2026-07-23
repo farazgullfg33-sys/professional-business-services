@@ -43,12 +43,37 @@ export async function GET(request: Request) {
   const isIcv = variantParam === "icv" || meta.docType === "icv";
   const client = quote.Client ?? {};
 
+  // Try to parse `services` JSON into individual line items.
+  const parseServicesJSON = (raw: unknown): LineItem[] => {
+    if (typeof raw !== "string") return [];
+    try {
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return [];
+      return arr
+        .filter((s: any) => s?.desc)
+        .map((s: any, idx: number) => ({
+          description: String(s.desc).trim(),
+          quantity: 1,
+          unitPrice: Number(s.amount) || 0,
+          amount: Number(s.amount) || 0,
+          refNum: idx === 0 ? undefined : undefined,
+        }));
+    } catch { return []; }
+  };
+
   // Prefer stored line items; fall back to legacy fees for old records.
   const stored: LineItem[] = normalizeItems(quote.lineItems);
-  const items: LineItem[] = stored.length > 0 ? stored : [
-    { description: quote.services || "Professional Services", quantity: 1, unitPrice: quote.proFees || 0, amount: quote.proFees || 0 },
-    { description: "Government / Authority Fees", quantity: 1, unitPrice: quote.govFees || 0, amount: quote.govFees || 0 },
-  ];
+  // Detect when a single line item's description is the raw `services` JSON
+  // (data migration artifact) — unpack it into individual rows.
+  const isJsonBlob = stored.length === 1 && stored[0]?.description?.startsWith("[{");
+  const items: LineItem[] = isJsonBlob
+    ? parseServicesJSON(quote.services)
+    : stored.length > 0
+      ? stored
+      : [
+          { description: quote.services || "Professional Services", quantity: 1, unitPrice: quote.proFees || 0, amount: quote.proFees || 0 },
+          { description: "Government / Authority Fees", quantity: 1, unitPrice: quote.govFees || 0, amount: quote.govFees || 0 },
+        ];
   // Always total the rows that are actually printed. Reading quote.total first
   // printed a stale figure whenever the line items had been edited, and `||`
   // discarded a legitimate 0 (e.g. a discount row cancelling the charges).
