@@ -63,11 +63,14 @@ export async function GET(request: Request) {
 
   // Prefer stored line items; fall back to legacy fees for old records.
   const stored: LineItem[] = normalizeItems(quote.lineItems);
-  // Detect when a single line item's description is the raw `services` JSON
-  // (data migration artifact) — unpack it into individual rows.
-  const isJsonBlob = stored.length === 1 && stored[0]?.description?.startsWith("[{");
-  const items: LineItem[] = isJsonBlob
-    ? parseServicesJSON(quote.services)
+  // Detect when any line item's description is the raw `services` JSON
+  // (data migration artifact) — unpack services into individual rows instead.
+  const hasJsonBlob = stored.some((it) => it.description?.startsWith("[{"));
+  const items: LineItem[] = hasJsonBlob
+    ? [
+        ...parseServicesJSON(quote.services),
+        ...stored.filter((it) => !it.description?.startsWith("[{")),
+      ]
     : stored.length > 0
       ? stored
       : [
