@@ -157,10 +157,11 @@ export function drawHeader(doc: jsPDF, title: string): number {
   doc.setFontSize(8);
   doc.setTextColor(...TEXT_BLACK);
   doc.text(COMPANY.phone1, MARGIN_R - 2.5, boxY + 5.2, { align: "right" });
-  doc.setFont(FONT, "normal");
+  doc.setFont(FONT, "bold");
   doc.setFontSize(7.2);
   doc.setTextColor(...GRAY_TEXT);
   doc.text(COMPANY.phone2, MARGIN_R - 2.5, boxY + 9.8, { align: "right" });
+  doc.setFont(FONT, "normal");
   doc.text(COMPANY.website, MARGIN_R - 2.5, boxY + 13.8, { align: "right" });
   doc.text(COMPANY.address, MARGIN_R - 2.5, boxY + 17.8, { align: "right" });
   doc.setFont(FONT, "bold");
