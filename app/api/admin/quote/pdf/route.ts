@@ -3,10 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizeItems, sumAmount, type LineItem, type DocMeta } from "@/lib/documents";
 import {
-  NAVY, NAVY_MID, HEADER_BG, YELLOW, BLACK, GRAY_TITLE,
+  BLACK, WHITE, TEXT_BLACK, PEACH_ROW, GRAY_TEXT,
   MARGIN_L, MARGIN_R, money, refNumber, formatDate,
-  drawHeader, sectionTitle, listBlock, GENERAL_TERMS, FONT, FS,
-  pageBreak, paginateFooters,
+  drawHeader, paginateFooters, refDateRows, sectionBar, fieldRow, fieldFull,
+  grandTotalBar, listBlock, GENERAL_TERMS, FONT, FS,
+  pageBreak,
 } from "@/lib/pdf/brand";
 
 const REQUIRED_DOCS_STD = [
@@ -51,12 +52,11 @@ export async function GET(request: Request) {
       if (!Array.isArray(arr)) return [];
       return arr
         .filter((s: any) => s?.desc)
-        .map((s: any, idx: number) => ({
+        .map((s: any) => ({
           description: String(s.desc).trim(),
           quantity: 1,
           unitPrice: Number(s.amount) || 0,
           amount: Number(s.amount) || 0,
-          refNum: idx === 0 ? undefined : undefined,
         }));
     } catch { return []; }
   };
@@ -87,148 +87,103 @@ export async function GET(request: Request) {
   const address = meta.address || client.address || "Abu Dhabi, UAE";
   const contact = meta.contact || client.phone || "-";
   const subject = meta.subject || (isIcv ? "ICV & ADNOC Pre-Qualification" : "Business Services Quotation");
-  const reference = meta.referenceNo || refNumber(quote.createdAt);
+  const reference = meta.referenceNo || refNumber(quote.createdAt, isIcv ? "ICV" : "QUO");
+  const dateStr = formatDate(quote.createdAt);
+  const validUntil = formatDate(new Date(new Date(quote.createdAt || Date.now()).getTime() + 15 * 24 * 60 * 60 * 1000).toISOString());
 
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "mm", format: "a4" });
 
-  drawHeader(doc, "QUOTATION");
+  let y = drawHeader(doc, isIcv ? "ICV & ADNOC QUOTATION" : "QUOTATION");
+  y = refDateRows(doc, y, [
+    ["Quotation", reference, "Date", dateStr],
+    ["Client ID", meta.clientRefId || "-", "Valid Until", validUntil],
+  ]);
 
-  // ── Client info block (two columns) ─────────────────────────────
-  // Left column: label at MARGIN_L, value at +30, clipped at 112 so it can't
-  // run into the right column (labels start at 120).
-  let y = 42;
-  const LEFT_V = MARGIN_L + 30, LEFT_W = 112 - LEFT_V;
-  const RIGHT_V = 150, RIGHT_W = MARGIN_R - RIGHT_V;
-  const L = (t: string, x: number, yy: number) => { doc.setFont(FONT, "bold"); doc.setTextColor(...BLACK); doc.setFontSize(FS.body); doc.text(t, x, yy); };
-  // Returns how many lines the value wrapped to, so the row can grow.
-  const V = (t: string, x: number, yy: number, w: number) => {
-    doc.setFont(FONT, "normal"); doc.setTextColor(...BLACK); doc.setFontSize(FS.body);
-    const lines = doc.splitTextToSize(t || "-", w) as string[];
-    doc.text(lines, x, yy);
-    return lines.length;
-  };
-  // One row of the two-column block; advances y past the taller of the two.
-  const row = (l1: string, v1: string, l2: string, v2: string) => {
-    L(l1, MARGIN_L, y);
-    L(l2, 120, y);
-    const n = Math.max(V(v1, LEFT_V, y, LEFT_W), V(v2, RIGHT_V, y, RIGHT_W));
-    y += (n - 1) * 5 + 6.5;
-  };
-
-  row("Name:", clientName, "DATE:", formatDate(quote.createdAt));
-  row("Company Name:", company, "Reference #:", reference);
-  row("Address:", address, "Client's ID:", meta.clientRefId || "-");
-  row("Contact no.:", contact, "Subject:", subject);
-  y += 6;
+  y = sectionBar(doc, "CLIENT DETAILS", y);
+  y = fieldRow(doc, y, "Name", clientName, "Company", company);
+  y = fieldRow(doc, y, "Address", address, "Contact", contact);
+  y = fieldFull(doc, y, "Subject", subject);
+  y += 4;
 
   // ── Quotation table (3 columns: S.R.NO | DESCRIPTION | AMOUNT) ───
-  // Reference proportions of the 180mm body: 15% / 65% / 20%.
   const xSR = MARGIN_L, W = MARGIN_R - MARGIN_L;
-  const xDesc = xSR + W * 0.15;  // 42
-  const xAmt = xDesc + W * 0.65; // 159
-  const xEnd = MARGIN_R;         // remaining 20%
+  const xDesc = xSR + W * 0.15;
+  const xAmt = xDesc + W * 0.65;
+  const xEnd = MARGIN_R;
   const centerOf = (a: number, b: number) => (a + b) / 2;
-  const PAD = 3.5; // cell padding — keeps text off the column rules
+  const PAD = 3.5;
 
-  const hH = 10;
-  // Repeated at the top of every page the table continues onto.
-  const drawTableHead = (yy: number): number => {
-    doc.setFillColor(...HEADER_BG);
-    doc.rect(xSR, yy, W, hH, "F");
-    doc.setDrawColor(...NAVY_MID);
-    doc.setLineWidth(0.5);
-    doc.rect(xSR, yy, W, hH, "S");
-    doc.line(xDesc, yy, xDesc, yy + hH);
-    doc.line(xAmt, yy, xAmt, yy + hH);
-    doc.setFont(FONT, "bold");
-    doc.setFontSize(FS.tableHead);
-    doc.setTextColor(...NAVY);
-    doc.text("S.R.NO", centerOf(xSR, xDesc), yy + 6.4, { align: "center" });
-    doc.text("DESCRIPTION", centerOf(xDesc, xAmt), yy + 6.4, { align: "center" });
-    doc.text("AMOUNT", centerOf(xAmt, xEnd), yy + 6.4, { align: "center" });
-    return yy + hH;
-  };
-  y = drawTableHead(y);
+  y = sectionBar(doc, isIcv ? "ICV & ADNOC BREAKDOWN" : "QUOTATION BREAKDOWN", y);
 
-  const bodyRow = (sr: string, descText: string, amountText: string) => {
-    doc.setFont(FONT, "normal");
-    doc.setFontSize(FS.body);
-    const lines = doc.splitTextToSize(descText, (xAmt - xDesc) - PAD * 2) as string[];
-    const h = Math.max(10, lines.length * 5.5 + 4.5);
-    // Keep the row whole — start a new page (and repeat the head) rather than
-    // clipping it.
-    const yBefore = y;
-    y = pageBreak(doc, y, h);
-    if (y !== yBefore) y = drawTableHead(y);
-    doc.setDrawColor(...NAVY_MID);
-    doc.setLineWidth(0.5);
-    doc.rect(xSR, y, W, h, "S");
-    doc.line(xDesc, y, xDesc, y + h);
-    doc.line(xAmt, y, xAmt, y + h);
-    doc.setTextColor(...BLACK);
-    if (sr) doc.text(sr, centerOf(xSR, xDesc), y + h / 2 + 1.5, { align: "center" });
-    doc.text(lines, xDesc + PAD, y + 5.8);
-    if (amountText) doc.text(amountText, xEnd - PAD, y + h / 2 + 1.5, { align: "right" });
-    y += h;
-  };
+  const hH = 9;
+  doc.setFillColor(...BLACK);
+  doc.rect(xSR, y, W, hH, "F");
+  doc.setFont(FONT, "bold");
+  doc.setFontSize(FS.dense);
+  doc.setTextColor(...WHITE);
+  doc.text("S.R.NO", centerOf(xSR, xDesc), y + hH / 2 + 1.6, { align: "center" });
+  doc.text("DESCRIPTION", centerOf(xDesc, xAmt), y + hH / 2 + 1.6, { align: "center" });
+  doc.text("AMOUNT", centerOf(xAmt, xEnd), y + hH / 2 + 1.6, { align: "center" });
+  y += hH;
 
   items.forEach((it, i) => {
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(FS.body);
     const qtyNote = (it.quantity && it.quantity > 1) ? `   (${it.quantity} × ${money(it.unitPrice || 0)})` : "";
-    bodyRow(String(i + 1), `${it.description}${qtyNote}`, money(it.amount || 0));
+    const lines = doc.splitTextToSize(`${it.description}${qtyNote}`, (xAmt - xDesc) - PAD * 2) as string[];
+    const h = Math.max(9, lines.length * 5 + 3.6);
+    const yBefore = y;
+    y = pageBreak(doc, y, h);
+    if (y === yBefore && i % 2 === 1) {
+      doc.setFillColor(...PEACH_ROW);
+      doc.rect(xSR, y, W, h, "F");
+    }
+    doc.setTextColor(...TEXT_BLACK);
+    doc.text(String(i + 1), centerOf(xSR, xDesc), y + h / 2 + 1.5, { align: "center" });
+    doc.text(lines, xDesc + PAD, y + 5.3);
+    doc.text(money(it.amount || 0), xEnd - PAD, y + h / 2 + 1.5, { align: "right" });
+    y += h;
   });
 
-  // Total row (mandatory #FFFF00 highlight) — kept with the table head.
-  const tH = 10;
-  const yBeforeTotal = y;
+  // GRAND TOTAL row inside the table (bold).
+  const tH = 9;
   y = pageBreak(doc, y, tH);
-  if (y !== yBeforeTotal) y = drawTableHead(y);
-  doc.setFillColor(...YELLOW);
-  doc.rect(xSR, y, W, tH, "F");
-  doc.setDrawColor(...NAVY_MID);
-  doc.setLineWidth(0.5);
-  doc.rect(xSR, y, W, tH, "S");
-  doc.line(xDesc, y, xDesc, y + tH);
-  doc.line(xAmt, y, xAmt, y + tH);
   doc.setFont(FONT, "bold");
-  doc.setFontSize(FS.total);
-  doc.setTextColor(...BLACK);
-  doc.text("TOTAL", centerOf(xSR, xDesc), y + 6.5, { align: "center" });
-  doc.text(money(total), xEnd - PAD, y + 6.5, { align: "right" });
-  y += tH + 10;
+  doc.setFontSize(FS.dense);
+  doc.setTextColor(...TEXT_BLACK);
+  doc.text("GRAND TOTAL", centerOf(xSR, xDesc), y + tH / 2 + 1.4, { align: "center" });
+  doc.text(money(total), xEnd - PAD, y + tH / 2 + 1.4, { align: "right" });
+  y += tH + 4;
+
+  y = grandTotalBar(doc, y, total);
+  y += 8;
 
   // ── Required documents ──────────────────────────────────────────
-  // sectionTitle reserves room for its first items; listBlock breaks the rest.
-  y = sectionTitle(doc, "REQUIRED DOCUMENTS:", y, 24);
+  y = sectionBar(doc, "REQUIRED DOCUMENTS", y);
   y = listBlock(doc, isIcv ? REQUIRED_DOCS_ICV : REQUIRED_DOCS_STD, y, true);
-  y += 6;
+  y += 4;
 
   // ── Terms ───────────────────────────────────────────────────────
-  y = sectionTitle(doc, "GENERAL TERMS AND CONDITIONS", y, 30);
-  doc.setFont(FONT, "italic");
-  doc.setFontSize(FS.body);
-  doc.setTextColor(...BLACK);
-  doc.text("IT IS AGREED AS FOLLOWS THAT:", MARGIN_L, y);
-  y += 6.5;
-  y = listBlock(doc, GENERAL_TERMS, y);
+  y = sectionBar(doc, "TERMS & CONDITIONS", y);
+  y = listBlock(doc, GENERAL_TERMS, y, true);
   y += 8;
 
   // ── Closing block ───────────────────────────────────────────────
-  // 22mm holds both centered lines plus the closing line beneath them.
-  y = pageBreak(doc, y, 22);
+  y = pageBreak(doc, y, 20);
   doc.setFont(FONT, "normal");
   doc.setFontSize(FS.body);
-  doc.setTextColor(...GRAY_TITLE);
-  doc.text("The QUOTATION is solely prepared for the Clients of PROFESSIONAL BUSINESS SERVICES.", 105, y, { align: "center" });
+  doc.setTextColor(...GRAY_TEXT);
+  doc.text("This quotation is solely prepared for the clients of Professional Business Services.", 105, y, { align: "center" });
   y += 5.5;
   doc.text("If you have any questions concerning this quotation, please contact us.", 105, y, { align: "center" });
   y += 10;
   doc.setFont(FONT, "bold");
   doc.setFontSize(FS.closing);
-  doc.setTextColor(...NAVY);
+  doc.setTextColor(...TEXT_BLACK);
   doc.text("THANK YOU FOR YOUR BUSINESS!", 105, y, { align: "center" });
 
-  paginateFooters(doc, "QUOTATION");
+  paginateFooters(doc);
 
   const pdf = Buffer.from(doc.output("arraybuffer"));
   return new NextResponse(pdf, {
